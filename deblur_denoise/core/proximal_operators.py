@@ -1,7 +1,7 @@
 import torch
 import numpy as np
 
-def prox_l1(x: torch.Tensor, lambda_val: float) -> torch.Tensor:
+def prox_l1(x: torch.Tensor | np.ndarray, lambda_val: float) -> torch.Tensor | np.ndarray:
     """
     Proximal operator of the L1 norm 
     """

@@ -8,7 +8,7 @@ import torch
 import torchvision
 import torchvision.transforms as transforms
 import torchvision.transforms.functional as TF
-
+from torch.nn import functional as F
 
 def read_image(
     path: str,
@@ -31,6 +31,9 @@ def read_image(
         img_gray = TF.rgb_to_grayscale(img_tensor)
     else:
         img_gray = img_tensor
+
+    if shape is not None:
+        img_gray = F.interpolate(img_gray.unsqueeze(0), size=shape, mode='bilinear', align_corners=False).squeeze(0)
     
     # Move to specified device if provided
     if device is not None:
