@@ -56,7 +56,7 @@ def primal_dr_splitting(problem: str, kernel: torch.Tensor, b: torch.Tensor,
         else:
             # iso norm on y2, y3 parts
             iso = prox_iso(z2[[1,2],:,:], i.get('tprimaldr') * i.get('gammal2'))
-            # l1 norm on y1-b part
+            # l2 norm squared on y1-b part
             norm = b + prox_l2_squared(z2[0,:,:] - b, i.get('tprimaldr'))
         y = torch.stack((norm, iso[0,:,:], iso[1,:,:]))
 
