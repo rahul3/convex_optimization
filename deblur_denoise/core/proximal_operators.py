@@ -70,3 +70,6 @@ if __name__ == "__main__":
     # test for prox_box
     x = torch.tensor([[0.5,1.1], [-0.3, 0.2], [0.3,0.4]])
     print(prox_box(x, 2))
+    #print(x * x)
+    print(torch.stack((x, x+1, 2 * x, x+x)))
+    print(torch.stack((x, x+1, x+2))[[1,2],:,:])
