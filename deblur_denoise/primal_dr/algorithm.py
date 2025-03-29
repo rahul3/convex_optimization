@@ -108,33 +108,47 @@ from core.noise import create_motion_blur_kernel
 from core.convolution import circular_convolve2d
 from utils.conv_utils import read_image
 
-image = read_image("/home/lilian/phd_other/convex_optimization/img2.jpg")
+image = read_image("/home/lilian/phd_other/convex_optimization/img2.jpg", shape=(500,500))
 
-motion_kernel = create_motion_blur_kernel(size=5, angle=45)
+motion_kernel = create_motion_blur_kernel(size=10, angle=45)
 motion_blurred = circular_convolve2d(image, motion_kernel)
 
-plt.subplot(2, 1, 1)
-plt.imshow(image.squeeze().numpy(), cmap="gray")
-plt.title("Original Image")
-plt.axis("off")
+#plt.subplot(1, 2, 1)
+#plt.imshow(image.squeeze().numpy(), cmap="gray")
+#plt.title("Original Image")
+#plt.axis("off")
 
-plt.subplot(2, 1, 2)
-plt.imshow(motion_blurred.squeeze().numpy(), cmap="gray")
-plt.title("Motion Blur")
-plt.axis("off")
+#plt.subplot(1, 2, 2)
+#plt.imshow(motion_blurred.squeeze().numpy(), cmap="gray")
+#plt.title("Motion Blur")
+#plt.axis("off")
 
-plt.tight_layout()
-plt.show()
+#plt.tight_layout()
+#plt.show()
 
 res = primal_dr_splitting('l1', create_motion_blur_kernel(), 
                           motion_blurred.squeeze(),
                           {
                             'maxiter': 500, 
-                            'gammal1': 0.01,
+                            'gammal1': 0.049,
                             'gammal2': 0.049,
-                            'tprimaldr': 2.0,
-                            'rhoprimaldr': 0.1,
+                            'tprimaldr': 1.5,
+                            'rhoprimaldr': 0.05,
                             'tol': 10**-6
                           })
+
+plt.subplot(1,3,1)
+plt.imshow(image.squeeze().numpy(), cmap='gray')
+plt.title('Original image')
+plt.axis('off')
+
+plt.subplot(1,3,2)
+plt.imshow(motion_blurred.squeeze().numpy(), cmap='gray')
+plt.title('Blurred image')
+plt.axis('off')
+
+plt.subplot(1,3,3)
 plt.imshow(res.squeeze().numpy(), cmap='gray')
+plt.title('Deblurred image')
+plt.axis('off')
 plt.show()
