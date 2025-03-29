@@ -13,6 +13,12 @@ def prox_l2(x: torch.Tensor | np.ndarray, lambda_val: float) -> torch.Tensor | n
     """
     return (1 - lambda_val / torch.norm(x)) * x if torch.norm(x) > lambda_val else torch.zeros_like(x) 
 
+def prox_l2_squared(x: torch.Tensor | np.ndarray, lambda_val: float) -> torch.Tensor | np.ndarray:
+    """
+    Proximal operator of the squared L2 norm
+    """
+    return x / (2 * lambda_val + 1)
+
 def prox_iso(x: torch.Tensor, lambda_val: float) -> torch.Tensor:
     """
     Proximal operator of the iso norm.
