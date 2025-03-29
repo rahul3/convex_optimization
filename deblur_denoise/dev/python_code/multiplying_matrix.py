@@ -51,7 +51,6 @@ class DeblurDenoiseOperators:
         d1_kernel = torch.tensor([[-1, 1]], device=self.b.device) # 1 x 2
         d2_kernel = torch.tensor([[-1, 1]], device=self.b.device) # 1 x 2
 
-        breakpoint()
         self.eig_arry_D1 = eig_vals_for_periodic_conv_op(d1_kernel, self.num_rows, self.num_cols) # 100 x 101
         self.eig_arry_D2 = eig_vals_for_periodic_conv_op(d2_kernel, self.num_rows, self.num_cols) # 100 x 101
         
@@ -59,7 +58,6 @@ class DeblurDenoiseOperators:
         self.eig_arry_KTrans = torch.conj(self.eig_arry_K)
         self.eig_arry_D1Trans = torch.conj(self.eig_arry_D1)
         self.eig_arry_D2Trans = torch.conj(self.eig_arry_D2)
-        breakpoint()
         
         # Compute eigenvalues for matrix inversion
         self.eig_vals_mat = (
