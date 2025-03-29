@@ -7,6 +7,12 @@ def prox_l1(x: torch.Tensor | np.ndarray, lambda_val: float) -> torch.Tensor | n
     """
     return torch.sign(x) * torch.clamp(torch.abs(x) - lambda_val, min=0)
 
+def prox_l2(x: torch.Tensor | np.ndarray, lambda_val: float) -> torch.Tensor | np.ndarray:
+    """
+    Proximal operator of the L2 norm
+    """
+    return (1 - lambda_val / torch.norm(x)) * x if torch.norm(x) > lambda_val else torch.zeros_like(x) 
+
 def prox_iso(x: torch.Tensor, lambda_val: float) -> torch.Tensor:
     """
     Proximal operator of the iso norm.
