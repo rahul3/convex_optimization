@@ -54,7 +54,10 @@ def primal_dr_splitting(problem: str, kernel: torch.Tensor, b: torch.Tensor,
             # l1 norm on y1-b part
             norm = b + prox_l1(z2[0,:,:] - b, i.get('tprimaldr'))
         else:
-            raise NotImplementedError('l2 problem not implemented yet')
+            # iso norm on y2, y3 parts
+            iso = prox_iso(z2[[1,2],:,:], i.get('tprimaldr') * i.get('gammal2'))
+            # l2 norm squared on y1-b part
+            norm = b + prox_l2_squared(z2[0,:,:] - b, i.get('tprimaldr'))
         y = torch.stack((norm, iso[0,:,:], iso[1,:,:]))
 
         # Update u
@@ -126,7 +129,7 @@ motion_blurred = circular_convolve2d(image, motion_kernel)
 #plt.tight_layout()
 #plt.show()
 
-res = primal_dr_splitting('l1', create_motion_blur_kernel(), 
+res = primal_dr_splitting('l2', create_motion_blur_kernel(), 
                           motion_blurred.squeeze(),
                           {
                             'maxiter': 500, 
