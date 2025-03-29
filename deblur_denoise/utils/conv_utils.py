@@ -3,12 +3,18 @@ import os
 import numpy as np
 import matplotlib.pyplot as plt
 from typing import Union, Optional
+from pathlib import Path
 
+from PIL import Image
 import torch
 import torchvision
 import torchvision.transforms as transforms
 import torchvision.transforms.functional as TF
+from torchvision.transforms import ToTensor
 from torch.nn import functional as F
+
+# Increase PIL limit if working with large TIFF files
+Image.MAX_IMAGE_PIXELS = None  # Remove decompression bomb protection
 
 def read_image(
     path: str,
@@ -21,9 +27,17 @@ def read_image(
     """
     if not os.path.exists(path):
         raise FileNotFoundError(f"Image file not found: {path}")
-    
+
+    file_extension = Path(path).suffix
+    file_extension = file_extension.lower() if file_extension else file_extension
+
+    if file_extension == '.tiff':
+        image = Image.open(path)
+        img_tensor = ToTensor()(image)
+    else:
+        img_tensor = torchvision.io.read_image(path)
+
     # Read image as tensor (returns a tensor in [C, H, W] format)
-    img_tensor = torchvision.io.read_image(path)
     img_tensor = img_tensor.float() / 255  # normalize to [0, 1]
     
     # Convert to grayscale and transform to tensor

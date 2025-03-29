@@ -4,6 +4,12 @@ import torch
 import torch.fft
 import numpy as np
 import matplotlib.pyplot as plt
+from pathlib import Path
+
+sys.path.append(str(Path(__file__).absolute()))
+sys.path.append(str(Path(__file__).parent.parent.absolute()))
+sys.path.append(str(Path(__file__).parent.absolute()))
+
 
 
 # Add the parent directory to the system path

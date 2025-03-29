@@ -62,7 +62,7 @@ if __name__ == "__main__":
     x = torch.tensor([[[0, 3], [1, 2]],[[2, 1], [1, 1/2]]])
     l = 2
 
-    print(prox_iso(x, 2))
+    print(prox_box(x, 2))
     print(prox_iso(x,2)[0,:,:])
     print(prox_iso(x,2)[1,:,:])
     print(prox_iso(x,2)[[0,1],:,:])
