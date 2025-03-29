@@ -56,13 +56,15 @@ def prox_box(x: torch.Tensor, lambda_val: float) -> torch.Tensor:
     """
     return torch.minimum(torch.ones(x.size()), torch.maximum(torch.zeros(x.size()), x))
 
-# tests
-# t1
-x = torch.tensor([[[0, 3], [1, 2]],[[2, 1], [1, 1/2]]])
-l = 2
 
-print(prox_iso(x, 2))
+def test_prox_ops():
+    # tests
+    # t1
+    x = torch.tensor([[[0, 3], [1, 2]],[[2, 1], [1, 1/2]]])
+    l = 2
 
-# test for prox_box
-x = torch.tensor([[0.5,1.1], [-0.3, 0.2], [0.3,0.4]])
-print(prox_box(x, 2))
+    print(prox_iso(x, 2))
+
+    # test for prox_box
+    x = torch.tensor([[0.5,1.1], [-0.3, 0.2], [0.3,0.4]])
+    print(prox_box(x, 2))
