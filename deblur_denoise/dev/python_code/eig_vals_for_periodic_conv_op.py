@@ -43,8 +43,14 @@ def eig_vals_for_periodic_conv_op(filter_kernel, num_rows, num_cols):
                      (pad_w, pad_w, pad_h, pad_h), 
                      mode='circular')
     
+    filter_kernel = filter_kernel.type(torch.float32)
+    a_padded = a_padded.type(torch.float32)
+    
     # Apply convolution
-    ra = F.conv2d(a_padded, filter_kernel, padding=0).squeeze()
+    ra_padded = F.conv2d(a_padded, filter_kernel, padding=0).squeeze()
+    
+    # Crop to original size
+    ra = ra_padded[:num_rows, :num_cols]
     
     # Fourier transform of the impulse response
     ra_hat = torch.fft.fft2(ra)

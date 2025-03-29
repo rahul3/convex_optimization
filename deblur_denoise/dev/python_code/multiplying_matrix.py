@@ -6,7 +6,7 @@ class DeblurDenoiseOperators:
     """
     Class for constructing matrices and operations required for image deblurring and denoising
     """
-    def __init__(self, kernel, blurred_image, tprimaldr, s=None):
+    def __init__(self, kernel, blurred_image, tprimaldr, s=None, device='cpu'):
         """
         Initialize the operators for deblurring and denoising
         
@@ -21,33 +21,45 @@ class DeblurDenoiseOperators:
         s : float, optional
             Additional step size parameter (if None, uses tprimaldr)
         """
-        self.kernel = kernel
-        self.b = blurred_image
-        self.t = tprimaldr
-        self.s = s if s is not None else tprimaldr
+        self.kernel = kernel # k x k
+        self.b = blurred_image # 100 x 100
+        self.t = tprimaldr  # scalar
+        self.s = s if s is not None else tprimaldr # scalar
         
         # Get image dimensions
-        self.num_rows, self.num_cols = blurred_image.shape
+        self.num_rows, self.num_cols = blurred_image.shape # 100 x 100
         
+        # Set device for all tensors
+        self.device = device
+        
+        # Move input tensors to the specified device
+        if self.kernel.device != self.device:
+            self.kernel = self.kernel.to(self.device)
+        
+        if self.b.device != self.device:
+            self.b = self.b.to(self.device)
         # Compute eigenvalue arrays
         self.setup_operators()
         
     def setup_operators(self):
         """Initialize all operators needed for deblurring and denoising"""
         # Compute eigenvalue arrays for K and D1, D2
-        self.eig_arry_K = eig_vals_for_periodic_conv_op(self.kernel, self.num_rows, self.num_cols)
+        self.eig_arry_K = eig_vals_for_periodic_conv_op(self.kernel, self.num_rows, self.num_cols) # 100 x 100
         
         # Create finite difference kernels
-        d1_kernel = torch.tensor([[-1], [1]], device=self.b.device)
-        d2_kernel = torch.tensor([[-1, 1]], device=self.b.device)
-        
-        self.eig_arry_D1 = eig_vals_for_periodic_conv_op(d1_kernel, self.num_rows, self.num_cols)
-        self.eig_arry_D2 = eig_vals_for_periodic_conv_op(d2_kernel, self.num_rows, self.num_cols)
+        # d1_kernel = torch.tensor([[-1], [1]], device=self.b.device) # 2 x 1
+        d1_kernel = torch.tensor([[-1, 1]], device=self.b.device) # 1 x 2
+        d2_kernel = torch.tensor([[-1, 1]], device=self.b.device) # 1 x 2
+
+        breakpoint()
+        self.eig_arry_D1 = eig_vals_for_periodic_conv_op(d1_kernel, self.num_rows, self.num_cols) # 100 x 101
+        self.eig_arry_D2 = eig_vals_for_periodic_conv_op(d2_kernel, self.num_rows, self.num_cols) # 100 x 101
         
         # Compute conjugate eigenvalue arrays
         self.eig_arry_KTrans = torch.conj(self.eig_arry_K)
         self.eig_arry_D1Trans = torch.conj(self.eig_arry_D1)
         self.eig_arry_D2Trans = torch.conj(self.eig_arry_D2)
+        breakpoint()
         
         # Compute eigenvalues for matrix inversion
         self.eig_vals_mat = (
