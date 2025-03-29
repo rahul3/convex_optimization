@@ -1,7 +1,7 @@
 import torch
 import numpy as np
 
-def prox_l1(x: torch.Tensor | np.ndarray, lambda_val: float) -> torch.Tensor | np.ndarray:
+def prox_l1(x: torch.Tensor, lambda_val: float) -> torch.Tensor:
     """
     Proximal operator of the L1 norm 
     """
@@ -56,15 +56,20 @@ def prox_box(x: torch.Tensor, lambda_val: float) -> torch.Tensor:
     """
     return torch.minimum(torch.ones(x.size()), torch.maximum(torch.zeros(x.size()), x))
 
-
-def test_prox_ops():
+if __name__ == "__main__":
     # tests
     # t1
     x = torch.tensor([[[0, 3], [1, 2]],[[2, 1], [1, 1/2]]])
     l = 2
 
-    print(prox_iso(x, 2))
+    print(prox_box(x, 2))
+    print(prox_iso(x,2)[0,:,:])
+    print(prox_iso(x,2)[1,:,:])
+    print(prox_iso(x,2)[[0,1],:,:])
 
     # test for prox_box
     x = torch.tensor([[0.5,1.1], [-0.3, 0.2], [0.3,0.4]])
     print(prox_box(x, 2))
+    #print(x * x)
+    print(torch.stack((x, x+1, 2 * x, x+x)))
+    print(torch.stack((x, x+1, x+2))[[1,2],:,:])

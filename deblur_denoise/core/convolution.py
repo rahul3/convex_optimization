@@ -170,4 +170,4 @@ def test_circular_convolve2d_with_noise_and_motion(img_path: str | None = None):
     plt.show()
 
 if __name__ == "__main__":
-    test_circular_convolve2d_with_noise_and_motion()
+    test_circular_convolve2d_with_noise_and_motion("/home/lilian/phd_other/convex_optimization/img2.jpg")
