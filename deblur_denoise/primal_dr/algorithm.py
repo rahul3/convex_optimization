@@ -111,7 +111,7 @@ from core.noise import create_motion_blur_kernel
 from core.convolution import circular_convolve2d
 from utils.conv_utils import read_image
 
-image = read_image("/home/lilian/phd_other/convex_optimization/img2.jpg", shape=(500,500))
+image = read_image("/home/lilian/phd_other/convex_optimization/img3.jpg", shape=(500,500))
 
 motion_kernel = create_motion_blur_kernel(size=10, angle=45)
 motion_blurred = circular_convolve2d(image, motion_kernel)
@@ -135,8 +135,8 @@ res = primal_dr_splitting('l2', create_motion_blur_kernel(),
                             'maxiter': 500, 
                             'gammal1': 0.049,
                             'gammal2': 0.049,
-                            'tprimaldr': 1.5,
-                            'rhoprimaldr': 0.05,
+                            'tprimaldr': 2.0,
+                            'rhoprimaldr': 1.0,
                             'tol': 10**-6
                           })
 
