@@ -81,7 +81,7 @@ def chambolle_pock_solver(problem: str, kernel: torch.Tensor, b: torch.Tensor,
             break
     
     if not exited_via_break:
-        print(f"Warning: maxiter reached ({i.get('maxiter')}), primal_dr did not converge")
+        print(f"Warning: maxiter reached ({i.get('maxiter')}), chambolle-pock did not converge")
         print(_l2_norm(x, xprev))
 
     return x
