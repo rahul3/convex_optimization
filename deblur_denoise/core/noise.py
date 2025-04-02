@@ -99,3 +99,15 @@ def create_motion_blur_kernel(size=15, angle=0) -> torch.Tensor:
     # Normalize the kernel
     kernel = kernel / kernel.sum()
     return kernel
+
+def gaussian_filter(size, sigma):
+    """
+    Create a Gaussian filter.
+    Args:
+        size: filter size (e.g., [3, 3]), sigma: standard deviation
+    """
+    x, y = np.meshgrid(np.linspace(-(size[0]//2), size[0]//2, size[0]),
+                       np.linspace(-(size[1]//2), size[1]//2, size[1]))
+    d = x**2 + y**2
+    H = np.exp(-d / (2 * sigma**2))
+    return H / H.sum()  # Normalize to sum to 1
