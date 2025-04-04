@@ -1,17 +1,23 @@
 """
-Implementation of Chambolle-Pock Method
+Implementation of Chambolle-Pock Algorithm
 """
 
-import os
-import sys
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
 import torch
-from dev.python_code.multiplying_matrix import * 
-from utils.conv_utils import *
-from core.convolution import circular_convolve2d
-from core.noise import gaussian_filter
-from core.proximal_operators import prox_box, prox_l1, prox_iso
+import numpy as np
+from scipy import ndimage
+
+from ..core.convolution import circular_convolve2d
+from ..core.noise import add_gaussian_noise, create_motion_blur_kernel
+from ..core.proximal_operators import prox_l1, prox_box, prox_iso
+from ..utils.conv_utils import read_image, display_images, display_complex_output
+from ..op_math.python_code.multiplying_matrix import DeblurDenoiseOperators
+
+def chambolle_pock_solver(args, **kwargs):
+    """
+    Chambolle-Pock Algorithm
+    """
+    # TODO: Implement the algorithm
+    raise NotImplementedError("This is a template. Please implement the algorithm.")
 
 
 def chambolle_pock(b: torch.Tensor,

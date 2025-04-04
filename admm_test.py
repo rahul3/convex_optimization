@@ -1,8 +1,8 @@
-# %%
+
 import torch
 import numpy as np
 from scipy import ndimage
-# %%
+
 from deblur_denoise.core.convolution import circular_convolve2d
 from deblur_denoise.core.noise import add_gaussian_noise
 from deblur_denoise.core.proximal_operators import prox_l1, prox_box, prox_iso
@@ -10,25 +10,25 @@ from deblur_denoise.core.noise import create_motion_blur_kernel
 
 from deblur_denoise.utils.conv_utils import read_image, display_images, display_complex_output
 
-from deblur_denoise.dev.python_code.multiplying_matrix import DeblurDenoiseOperators
+from deblur_denoise.op_math.python_code.multiplying_matrix import DeblurDenoiseOperators
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 # Best parameters: t=10, rho=0.0001, gamma=0.1
-# %%
+
 # IMAGE_PATH = '/Users/rahulpadmanabhan/Code/ws3/convex_optimization/deblur_denoise/utils/other_images/grok_generated_image.jpg'
-IMAGE_PATH = '/Users/rahulpadmanabhan/Code/ws3/convex_optimization/deblur_denoise/utils/other_images/manWithHat.tiff'
+IMAGE_PATH = '/Users/rahulpadmanabhan/Code/ws3/convex_optimization/.develop/manWithHat.tiff'
 # IMAGE_PATH = '/Users/rahulpadmanabhan/Code/ws3/convex_optimization/deblur_denoise/utils/other_images/scientist.jpg'
-# %%
+
 image = read_image(IMAGE_PATH, shape=(100, 100))
 image.shape
 
-# %%
+
 # Create different blur kernels
 gaussian_kernel = torch.tensor([[1, 2, 1],
                                 [2, 4, 2],
                                 [1, 2, 1]], dtype=torch.float32)
 
-# %%
+
 
 def gaussian_filter(size, sigma):
     # size: filter size (e.g., [3, 3]), sigma: standard deviation
@@ -44,7 +44,7 @@ kernel = torch.from_numpy(kernel)
 kernel = kernel.type(torch.float32)
 
 
-# %%
+
 # gaussian_blurred = circular_convolve2d(image, gaussian_kernel,)
 gaussian_blurred = circular_convolve2d(image, kernel)
 gaussian_blurred = gaussian_blurred.type(torch.float32)
@@ -52,10 +52,10 @@ gaussian_blurred = gaussian_blurred.type(torch.float32)
 motion_kernel = create_motion_blur_kernel(size=3, angle=45)
 motion_blurred = circular_convolve2d(image, motion_kernel)
 
-# %%
+
 # display_images(image, gaussian_blurred)
 
-# %%
+
 
 b = gaussian_blurred.squeeze() # blurred image
 b = motion_blurred.squeeze()
@@ -80,7 +80,7 @@ gamma = 0.5  # default gamma
 
 
 
-# %%
+
 imh, imw = b.shape
 # Same dimension as image
 x = torch.clamp(torch.randn((imh, imw), dtype=torch.float32), min=0, max=1)
@@ -90,7 +90,7 @@ w = torch.clamp(torch.randn((imh, imw), dtype=torch.float32), min=0, max=1)
 y = torch.clamp(torch.randn((3, imh, imw), dtype=torch.float32), min=0, max=1)
 z = torch.clamp(torch.randn((3, imh, imw), dtype=torch.float32), min=0, max=1)
 
-# %%
+
 print(f"x: {x.shape}, u: {u.shape}, w: {w.shape}, y: {y.shape}, z: {z.shape}")
 print(f"x.device: {x.device}, u.device: {u.device}, w.device: {w.device}, y.device: {y.device}, z.device: {z.device}")
 print(f"x.dtype: {x.dtype}, u.dtype: {u.dtype}, w.dtype: {w.dtype}, y.dtype: {y.dtype}, z.dtype: {z.dtype}")
@@ -100,13 +100,13 @@ print(f"x.grad_fn: {x.grad_fn}, u.grad_fn: {u.grad_fn}, w.grad_fn: {w.grad_fn}, 
 print(f"x.grad_fn: {x.grad_fn}, u.grad_fn: {u.grad_fn}, w.grad_fn: {w.grad_fn}, y.grad_fn: {y.grad_fn}, z.grad_fn: {z.grad_fn}")
 
 
-# %%
+
 dd_ops = DeblurDenoiseOperators(kernel=kernel,
                                 blurred_image=b,
                                 tprimaldr=t,
                                 s=t)
 
-# %%
+
 dd_ops = DeblurDenoiseOperators(kernel=kernel,
                             blurred_image=b,
                             tprimaldr=t,
@@ -132,6 +132,11 @@ prev_sol, sol_next = torch.zeros((100, 100)), torch.zeros((100, 100))
 t_values = [0.01]
 rho_values = [0.0033400000000000005]
 gamma_values = [0.1]
+
+t_values = [18]
+rho_values = [0.01]
+gamma_values = [0.5]
+
 for t in t_values:
 
     for rho in rho_values:
@@ -299,7 +304,7 @@ else:
 
 print(f"Best parameters: t={best_t}, rho={best_rho}, gamma={best_gamma}")
 
-# %%    
+    
 
 
 
@@ -308,11 +313,11 @@ print(f"Best parameters: t={best_t}, rho={best_rho}, gamma={best_gamma}")
 
 
 
-# %%
 
 
 
-# %%
+
+
 
 
 

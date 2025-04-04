@@ -51,9 +51,6 @@ def circular_convolve2d(image, kernel):
     return blurred_image
 
 
-
-
-
 def test_circular_convolve2d_with_noise_and_motion(img_path: str | None = None):
     """
     Test the circular_convolve2d function with different types of noise and motion blur.
