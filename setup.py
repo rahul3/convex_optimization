@@ -3,13 +3,14 @@ from setuptools import setup, find_packages
 setup(
     name="convex_optimization",
     version="0.1.0",
-    packages=find_packages(),
+    packages=find_packages(include=['deblur_denoise', 'deblur_denoise.*']),
     install_requires=[
         "numpy>=1.21.0",
         "scipy>=1.7.0",
         "matplotlib>=3.4.0",
+        "torch>=1.10.0",
     ],
-    author="Rahul Padmanabhan, Lilian Yuan, Alexander Kakabadze, Edmand Yu",
+    author="Alexander Kakabadze, Edmand Yu, Lilian Yuan, Rahul Padmanabhan",
     author_email="rahul.padmanabhan@mail.mcgill.ca",
     description="A collection of convex optimization algorithms",
     long_description=open("Project.md").read(),
