@@ -3,13 +3,15 @@ Implementation of Primal-Dual Douglas-Rachford Splitting Algorithm
 """
 
 import torch
-from dev.python_code.multiplying_matrix import * 
-from utils.conv_utils import *
-from core.convolution import circular_convolve2d
-from core.proximal_operators import prox_box, prox_l1, prox_iso
-
 import numpy as np
 from scipy import ndimage
+
+from ..op_math.python_code.multiplying_matrix import * 
+from ..utils.conv_utils import *
+from ..core.convolution import circular_convolve2d
+from ..core.proximal_operators import prox_box, prox_l1, prox_iso
+from ..core.noise import gaussian_filter, create_motion_blur_kernel
+
 
 def primal_dual_dr_splitting(b: torch.Tensor , kernel : torch.Tensor, 
                               max_iter=1000, t = 3, rho = 0.4, gamma = 0.03, tol=1e-6):
@@ -79,8 +81,25 @@ def primal_dual_dr_splitting(b: torch.Tensor , kernel : torch.Tensor,
     return x_sol
 
 
-if __name__=="__main__":
-    #Testing
+def test_primal_dual_dr_splitting(image_path: str,
+                                  blur_type: str="gaussian",
+                                  blur_kernel_size: int=10,
+                                  blur_kernel_sigma: float=0.8,
+                                  blur_kernel_angle: float=45,
+                                  image_shape: tuple=(500, 500)):
     
-    print(0)
+    img = read_image(image_path, shape=image_shape)
 
+    if blur_type == "gaussian":
+        kernel = gaussian_filter(size=[blur_kernel_size, blur_kernel_size], sigma=blur_kernel_sigma)
+    elif blur_type == "motion":
+        kernel = create_motion_blur_kernel(size=[blur_kernel_size, blur_kernel_size], angle=blur_kernel_angle)
+    kernel = torch.from_numpy(kernel)
+
+    blurred = circular_convolve2d(img, kernel)
+
+    x_sol = primal_dual_dr_splitting(blurred, kernel)
+
+    display_images(img, x_sol, title1=f"Blurred Image - {blur_type}", title2="Deblurred Image")
+
+    return x_sol

@@ -4,10 +4,16 @@ Implementation of Primal Douglas-Rachford Splitting Algorithm
 
 import torch
 import numpy as np
-from dev.python_code.multiplying_matrix import DeblurDenoiseOperators
-from core.proximal_operators import prox_box, prox_iso, prox_l1, prox_l2_squared
+from scipy import ndimage
+
+from ..core.convolution import circular_convolve2d
+from ..core.noise import create_motion_blur_kernel, gaussian_filter
+from ..core.proximal_operators import prox_l1, prox_box, prox_iso, prox_l2_squared
+from ..utils.conv_utils import read_image, display_images, display_complex_output
+from deblur_denoise.op_math.python_code.multiplying_matrix import DeblurDenoiseOperators
 
 def primal_dr_splitting(problem: str, kernel: torch.Tensor, b: torch.Tensor,
+                        image_path: str = None, shape: tuple = (100, 100),
                         i: dict = {
                             'maxiter': 500, 
                             'gammal1': 0.049,
@@ -23,6 +29,8 @@ def primal_dr_splitting(problem: str, kernel: torch.Tensor, b: torch.Tensor,
     problem: "l1" or "l2", indicating which version of the problem we're solving
     kernel: the kernel k used to do the convolution
     b: the blurry image as a matrix
+    image_path: the path to the image
+    shape: the shape of the image
     i: a dictionary with additional parameters. For primal_dr_splitting, it uses
         the following parameters (as keys in the dictionary):
         * maxiter (max allowed number of iterations)
@@ -106,52 +114,61 @@ def _l2_norm(x: torch.Tensor, y: torch.Tensor) -> float:
     return float(np.sqrt(torch.sum((x-y) * (x-y))))
 
 # test
-import matplotlib.pyplot as plt
-from core.noise import create_motion_blur_kernel
-from core.convolution import circular_convolve2d
-from utils.conv_utils import read_image
+def primal_dr_splitting_test(image_path: str,
+                             blur_type: str="gaussian",
+                             blur_kernel_size: int=10,
+                             blur_kernel_sigma: float=0.8,
+                             blur_kernel_angle: float=45,
+                             image_shape: tuple=(500, 500)):
+    import matplotlib.pyplot as plt
+    from ..core.noise import create_motion_blur_kernel
+    from ..core.convolution import circular_convolve2d
+    from ..utils.conv_utils import read_image
 
-image = read_image("/home/lilian/phd_other/convex_optimization/img2.jpg", shape=(500,500))
+    image = read_image(image_path, shape=image_shape)
 
-motion_kernel = create_motion_blur_kernel(size=10, angle=45)
-motion_blurred = circular_convolve2d(image, motion_kernel)
+    if blur_type == "motion":
+        motion_kernel = create_motion_blur_kernel(size=blur_kernel_size, angle=blur_kernel_angle)
+    elif blur_type == "gaussian":
+        motion_kernel = gaussian_filter(size=[blur_kernel_size, blur_kernel_size], sigma=blur_kernel_sigma)
+    motion_blurred = circular_convolve2d(image, motion_kernel)
 
-#plt.subplot(1, 2, 1)
-#plt.imshow(image.squeeze().numpy(), cmap="gray")
-#plt.title("Original Image")
-#plt.axis("off")
+    #plt.subplot(1, 2, 1)
+    #plt.imshow(image.squeeze().numpy(), cmap="gray")
+    #plt.title("Original Image")
+    #plt.axis("off")
 
-#plt.subplot(1, 2, 2)
-#plt.imshow(motion_blurred.squeeze().numpy(), cmap="gray")
-#plt.title("Motion Blur")
-#plt.axis("off")
+    #plt.subplot(1, 2, 2)
+    #plt.imshow(motion_blurred.squeeze().numpy(), cmap="gray")
+    #plt.title("Motion Blur")
+    #plt.axis("off")
 
-#plt.tight_layout()
-#plt.show()
+    #plt.tight_layout()
+    #plt.show()
 
-res = primal_dr_splitting('l2', create_motion_blur_kernel(), 
-                          motion_blurred.squeeze(),
-                          {
-                            'maxiter': 500, 
-                            'gammal1': 0.049,
-                            'gammal2': 0.049,
-                            'tprimaldr': 1.5,
-                            'rhoprimaldr': 0.05,
-                            'tol': 10**-6
-                          })
+    res = primal_dr_splitting('l2', create_motion_blur_kernel(), 
+                            motion_blurred.squeeze(),
+                            {
+                                'maxiter': 500, 
+                                'gammal1': 0.049,
+                                'gammal2': 0.049,
+                                'tprimaldr': 1.5,
+                                'rhoprimaldr': 0.05,
+                                'tol': 10**-6
+                            })
 
-plt.subplot(1,3,1)
-plt.imshow(image.squeeze().numpy(), cmap='gray')
-plt.title('Original image')
-plt.axis('off')
+    plt.subplot(1,3,1)
+    plt.imshow(image.squeeze().numpy(), cmap='gray')
+    plt.title('Original image')
+    plt.axis('off')
 
-plt.subplot(1,3,2)
-plt.imshow(motion_blurred.squeeze().numpy(), cmap='gray')
-plt.title('Blurred image')
-plt.axis('off')
+    plt.subplot(1,3,2)
+    plt.imshow(motion_blurred.squeeze().numpy(), cmap='gray')
+    plt.title('Blurred image')
+    plt.axis('off')
 
-plt.subplot(1,3,3)
-plt.imshow(res.squeeze().numpy(), cmap='gray')
-plt.title('Deblurred image')
-plt.axis('off')
-plt.show()
+    plt.subplot(1,3,3)
+    plt.imshow(res.squeeze().numpy(), cmap='gray')
+    plt.title('Deblurred image')
+    plt.axis('off')
+    plt.show()
