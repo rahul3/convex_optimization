@@ -7,8 +7,8 @@ import numpy as np
 from scipy import ndimage
 
 from ..core.convolution import circular_convolve2d
-from ..core.noise import add_gaussian_noise, create_motion_blur_kernel
-from ..core.proximal_operators import prox_l1, prox_box, prox_iso
+from ..core.noise import create_motion_blur_kernel, gaussian_filter
+from ..core.proximal_operators import prox_l1, prox_box, prox_iso, prox_l2_squared
 from ..utils.conv_utils import read_image, display_images, display_complex_output
 from deblur_denoise.op_math.python_code.multiplying_matrix import DeblurDenoiseOperators
 
@@ -114,15 +114,23 @@ def _l2_norm(x: torch.Tensor, y: torch.Tensor) -> float:
     return float(np.sqrt(torch.sum((x-y) * (x-y))))
 
 # test
-def primal_dr_splitting_test():
+def primal_dr_splitting_test(image_path: str,
+                             blur_type: str="gaussian",
+                             blur_kernel_size: int=10,
+                             blur_kernel_sigma: float=0.8,
+                             blur_kernel_angle: float=45,
+                             image_shape: tuple=(500, 500)):
     import matplotlib.pyplot as plt
     from ..core.noise import create_motion_blur_kernel
     from ..core.convolution import circular_convolve2d
     from ..utils.conv_utils import read_image
 
-    image = read_image("/Users/rahulpadmanabhan/Code/ws3/convex_optimization/deblur_denoise/utils/other_images/manWithHat.tiff", shape=(500,500))
+    image = read_image(image_path, shape=image_shape)
 
-    motion_kernel = create_motion_blur_kernel(size=10, angle=45)
+    if blur_type == "motion":
+        motion_kernel = create_motion_blur_kernel(size=blur_kernel_size, angle=blur_kernel_angle)
+    elif blur_type == "gaussian":
+        motion_kernel = gaussian_filter(size=[blur_kernel_size, blur_kernel_size], sigma=blur_kernel_sigma)
     motion_blurred = circular_convolve2d(image, motion_kernel)
 
     #plt.subplot(1, 2, 1)
