@@ -12,14 +12,6 @@ from ..core.proximal_operators import prox_l1, prox_box, prox_iso
 from ..utils.conv_utils import read_image, display_images, display_complex_output
 from ..op_math.python_code.multiplying_matrix import DeblurDenoiseOperators
 
-def chambolle_pock_solver(args, **kwargs):
-    """
-    Chambolle-Pock Algorithm
-    """
-    # TODO: Implement the algorithm
-    raise NotImplementedError("This is a template. Please implement the algorithm.")
-
-
 def chambolle_pock(b: torch.Tensor,
                    kernel: torch.Tensor,
                    t: float=0.4,
@@ -77,15 +69,23 @@ def chambolle_pock(b: torch.Tensor,
 
     x_sol = x_next
     print(f"{x_sol.shape=}")
+
     return x_sol
 
 
-def chambolle_pock_test():
-    IMG_PATH = '/Users/rahulpadmanabhan/Code/ws3/convex_optimization/deblur_denoise/utils/other_images/grok_generated_image.jpg'
-    img = read_image(IMG_PATH, shape=(200,200))
+def chambolle_pock_test(image_path: str,
+                        image_shape: tuple=(200, 200),
+                        blur_type: str="gaussian",
+                        blur_kernel_size: int=5,
+                        blur_kernel_sigma: float=0.8,
+                        blur_kernel_angle: float=45):
+    img = read_image(image_path, shape=image_shape)
 
     # Generate a kernel
-    kernel = gaussian_filter([5,5], 0.8)
+    if blur_type == "gaussian":
+        kernel = gaussian_filter(size=[blur_kernel_size, blur_kernel_size], sigma=blur_kernel_sigma)
+    elif blur_type == "motion":
+        kernel = create_motion_blur_kernel(size=[blur_kernel_size, blur_kernel_size], angle=blur_kernel_angle)
     kernel = torch.from_numpy(kernel)
 
     # Blur the image
@@ -97,5 +97,5 @@ def chambolle_pock_test():
     x_sol = chambolle_pock(b, kernel)
 
     # display
-    display_images(b, x_sol, title1="Blurred Image", title2="Deblurred Image")
+    display_images(b, x_sol, title1=f"Blurred Image - {blur_type}", title2="Deblurred Image")
 

@@ -1,8 +1,7 @@
 """
-Implementation of ADMM (Dual Douglas-Rachford) Algorithm
+Implementation of ADMM (Alternating Direction Method of Multipliers) Algorithm
 """
 import torch
-import numpy as np
 from scipy import ndimage
 
 from ..core.convolution import circular_convolve2d
@@ -19,11 +18,12 @@ def admm_solver(b: torch.Tensor,
                 niters: int=1000,
                 **kwargs):
     """
-    ADMM (Dual Douglas-Rachford) Algorithm
+    ADMM (Alternating Direction Method of Multipliers) Algorithm
     """
-    # TODO: Implement the algorithm
-    breakpoint()
-    
+    t = 18 # step-size
+    rho = 0.001 # relaxation parameter
+    gamma = 0.5
+
     imh, imw = b.shape
     # Same dimension as image
     x = torch.clamp(torch.randn((imh, imw), dtype=torch.float32), min=0, max=1)
@@ -33,30 +33,20 @@ def admm_solver(b: torch.Tensor,
     y = torch.clamp(torch.randn((3, imh, imw), dtype=torch.float32), min=0, max=1)
     z = torch.clamp(torch.randn((3, imh, imw), dtype=torch.float32), min=0, max=1)
 
-
-    print(f"x: {x.shape}, u: {u.shape}, w: {w.shape}, y: {y.shape}, z: {z.shape}")
-    print(f"x.device: {x.device}, u.device: {u.device}, w.device: {w.device}, y.device: {y.device}, z.device: {z.device}")
-    print(f"x.dtype: {x.dtype}, u.dtype: {u.dtype}, w.dtype: {w.dtype}, y.dtype: {y.dtype}, z.dtype: {z.dtype}")
-    print(f"x.requires_grad: {x.requires_grad}, u.requires_grad: {u.requires_grad}, w.requires_grad: {w.requires_grad}, y.requires_grad: {y.requires_grad}, z.requires_grad: {z.requires_grad}")
-    print(f"x.grad: {x.grad}, u.grad: {u.grad}, w.grad: {w.grad}, y.grad: {y.grad}, z.grad: {z.grad}")
-    print(f"x.grad_fn: {x.grad_fn}, u.grad_fn: {u.grad_fn}, w.grad_fn: {w.grad_fn}, y.grad_fn: {y.grad_fn}, z.grad_fn: {z.grad_fn}")
-    print(f"x.grad_fn: {x.grad_fn}, u.grad_fn: {u.grad_fn}, w.grad_fn: {w.grad_fn}, y.grad_fn: {y.grad_fn}, z.grad_fn: {z.grad_fn}")
-
-
     dd_ops = DeblurDenoiseOperators(kernel=kernel,
                                     blurred_image=b,
                                     tprimaldr=1,
                                     s=1)
 
+    x_prev, x_next = x.clone(), x.clone()
+    u_prev, u_next = u.clone(), u.clone()
+    w_prev, w_next = w.clone(), w.clone()
+    y_prev, y_next = y.clone(), y.clone()
+    z_prev, z_next = z.clone(), z.clone()
 
-    x_prev, x_next = x, x
-    u_prev, u_next = u, u
-    w_prev, w_next = w, w
-    y_prev, y_next = y, y
-    z_prev, z_next = z, z
-    prev_sol, sol_next = torch.zeros((100, 100)), torch.zeros((100, 100))
+    prev_sol, sol_next = torch.zeros((imh, imw)), torch.zeros((imh, imw))
 
-    for i in range(1, niters+1):
+    for i in range(1, niters):
         # A^{T}y^{k-1}
         # to compute A we need [K, D]^{T}
         K_T_y = dd_ops.apply_KTrans(y_prev[0]) # to get K^T y , we use the y[0]
@@ -99,20 +89,6 @@ def admm_solver(b: torch.Tensor,
         y_prev = y_next
         z_prev = z_next
 
-        # Check for NaN values in all _next tensors
-        if (torch.isnan(x_next).any() or 
-            torch.isnan(u_next).any() or 
-            torch.isnan(w_next).any() or 
-            torch.isnan(y_next).any() or 
-            torch.isnan(z_next).any()):
-            print(f"NaN detected at iteration {i}")
-            print(f"x_next has NaN: {torch.isnan(x_next).any()}")
-            print(f"u_next has NaN: {torch.isnan(u_next).any()}")
-            print(f"w_next has NaN: {torch.isnan(w_next).any()}")
-            print(f"y_next has NaN: {torch.isnan(y_next).any()}")
-            print(f"z_next has NaN: {torch.isnan(z_next).any()}")
-            break
-
         # Checking if the solution is converging
         if i % 100 == 0:
             print(f"iteration {i} completed")
@@ -126,7 +102,7 @@ def admm_solver(b: torch.Tensor,
             z_12 = torch.stack([z_next[1], z_next[2]], dim=0)
             z_12 = z_12.permute(1, 2, 0)
             D_T_z = dd_ops.apply_DTrans(z_12)
-            A_T_z = K_T_z + D_T_z # TODO Nans issu
+            A_T_z = K_T_z + D_T_z 
 
             sol_param = u_next + A_T_y - (1/t)*(w_next + A_T_z)
             sol = torch.real(dd_ops.invert_matrix(sol_param))        
@@ -144,7 +120,7 @@ def admm_solver(b: torch.Tensor,
                     print(f"Converged at iteration {i} with relative difference {diff:.6f}")
                     break
             
-
+    # building the final solution
     K_T_y = dd_ops.apply_KTrans(y_next[0]) # to get K^T y , we use the y[0]
     y_12 = torch.stack([y_next[1], y_next[2]], dim=0) # the part of y that interacts with D 
     y_12 = y_12.permute(1, 2, 0) # because of the way the apply_DTrans is implemented (convert from (2,100,100) to (100, 100, 2))
@@ -160,16 +136,21 @@ def admm_solver(b: torch.Tensor,
     sol_param = u_next + A_T_y - (1/t)*(w_next + A_T_z)
     sol = torch.real(dd_ops.invert_matrix(sol_param))
 
-    display_images(b, sol)
-    
+    # display_images(b, sol, title1="Blurred", title2="Deblurred")
+    return sol
 
-def admm_solver_test():
+def admm_solver_test(blur_type: str="gaussian",
+                     blur_kernel_size: int=5,
+                     blur_kernel_sigma: float=0.8,
+                     blur_kernel_angle: float=45,
+                     image_path: str=None,
+                     image_shape: tuple=(500, 500)):
     """
     Test function for ADMM solver during development
     """
     # You can change these parameters for testing
-    IMAGE_PATH = '/Users/rahulpadmanabhan/Code/ws3/convex_optimization/.develop/manWithHat.tiff'
-    IMAGE_SHAPE = (100, 100)  # You can adjust this
+    IMAGE_PATH = image_path
+    IMAGE_SHAPE = image_shape
     T = 18.0  # Step size
     RHO = 0.001  # Relaxation parameter
     GAMMA = 0.5  # Regularization parameter
@@ -182,19 +163,23 @@ def admm_solver_test():
     print(f"Parameters: t={T}, rho={RHO}, gamma={GAMMA}")
     
     # Create a simple blur kernel for testing
-    kernel = torch.tensor([[1, 2, 1],
-                          [2, 4, 2],
-                          [1, 2, 1]], dtype=torch.float32) / 16.0
+    if blur_type == "gaussian":
+        kernel = gaussian_filter(size=[blur_kernel_size, blur_kernel_size], sigma=blur_kernel_sigma)
+    elif blur_type == "motion":
+        kernel = create_motion_blur_kernel(size=[blur_kernel_size, blur_kernel_size], angle=blur_kernel_angle)
+    kernel = torch.from_numpy(kernel)
     
     # Blur the image
     blurred = circular_convolve2d(image, kernel)
+
+    display_images(image, blurred, title1="Original", title2="Blurred")
     
     # Run the solver
-    result = admm_solver(b=blurred.squeeze(0).clone(), t=T, rho=RHO, gamma=GAMMA)
+    result = admm_solver(b=blurred.squeeze(0).clone(), kernel=kernel, t=T, rho=RHO, gamma=GAMMA)
     
     # Display results
     display_images(blurred, result, 
-                  title1="Blurred Image", 
+                  title1=f"Blurred Image - {blur_type}", 
                   title2="Deblurred Image")
     
     # Calculate metrics
