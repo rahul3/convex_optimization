@@ -79,6 +79,9 @@ def chambolle_pock_test(image_path: str,
                         blur_kernel_size: int=5,
                         blur_kernel_sigma: float=0.8,
                         blur_kernel_angle: float=45):
+    """
+    Test the Chambolle-Pock algorithm
+    """
     img = read_image(image_path, shape=image_shape)
 
     # Generate a kernel
