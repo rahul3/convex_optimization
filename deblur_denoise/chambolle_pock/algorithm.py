@@ -7,7 +7,7 @@ import numpy as np
 from scipy import ndimage
 
 from ..core.convolution import circular_convolve2d
-from ..core.noise import add_gaussian_noise, create_motion_blur_kernel
+from ..core.noise import add_gaussian_noise, create_motion_blur_kernel, gaussian_filter
 from ..core.proximal_operators import prox_l1, prox_box, prox_iso
 from ..utils.conv_utils import read_image, display_images, display_complex_output
 from ..op_math.python_code.multiplying_matrix import DeblurDenoiseOperators
@@ -48,7 +48,7 @@ def chambolle_pock(b: torch.Tensor,
         # Computing the proximal of g^\ast
         c1 = g_ast_input[0] - s * b - s * prox_l1(g_ast_input[0]/s - b, 1/s)
         c2 = g_ast_input[1:] - s *  prox_iso(g_ast_input[1:]/s, 1/s * gamma)
-        y_next = torch.cat((c1, c2), dim =0).clone()
+        y_next = torch.cat((c1, c2), dim=0).clone()
 
         # A^Ty
         A_T_y = dd_ops.apply_KTrans(y_next[0]) + dd_ops.apply_DTrans(y_next[1:].permute(1,2,0))
