@@ -76,9 +76,9 @@ def deblur_image(noisy_image: torch.Tensor,
     elif algorithm == "chambolle_pock":
         deblurred_image = chambolle_pock(b=noisy_image.unsqueeze(0), kernel=kernel, t=t, s=s, gamma=gamma, max_iter=niters)
     elif algorithm == "primal_dual_dr":
-        deblurred_image = primal_dual_dr_splitting(noisy_image)
+        deblurred_image = primal_dual_dr_splitting(noisy_image) # TODO: Add functionality
     elif algorithm == "primal_dr":
-        deblurred_image = primal_dr_splitting(noisy_image)
+        deblurred_image = primal_dr_splitting(problem="primal_dr", b=noisy_image, kernel=kernel) # TODO: Add functionality
     else:
         raise NotImplementedError(f"Algorithm {algorithm} not implemented")
     
@@ -92,25 +92,42 @@ def blur_and_deblur_image(image_path: str,
                           blur_type: str="gaussian",
                           blur_kernel_size: int=5,
                           blur_kernel_sigma: float=0.8,
+                          blur_kernel_angle: float=45,
                           display: bool=False,
                           kernel: torch.Tensor=None,
                           algorithm: str="chambolle_pock",
                           t: float=0.4,
                           s: float=0.7,
                           gamma: float=0.01,
+                          salt_prob: float=0.15,
+                          pepper_prob: float=0.15,
+                          mean: float=0.0,
+                          std: float=0.1,
+                          scale: float=1.0,
                           max_iter: int=1000) -> torch.Tensor:
     """
     Blur and deblur an image.
     """
+    # Generate a kernel if not provided, using gaussian filter
     if kernel is None:
         kernel = gaussian_filter([blur_kernel_size, blur_kernel_size], blur_kernel_sigma)
         kernel = torch.from_numpy(kernel)
+
+    # Blur the image
     blurred_image = blur_image(image_path=image_path,
                               image_shape=(300, 300),
                               blur_type=blur_type,
                               blur_kernel_size=blur_kernel_size,
                               blur_kernel_sigma=blur_kernel_sigma,
+                              blur_kernel_angle=blur_kernel_angle,
+                              salt_prob=salt_prob,
+                              pepper_prob=pepper_prob,
+                              mean=mean,
+                              std=std,
+                              scale=scale,
                               display=display)
+    
+    # Deblur the image
     deblurred_image = deblur_image(blurred_image,
                                   kernel=kernel,
                                   algorithm=algorithm,
@@ -119,11 +136,28 @@ def blur_and_deblur_image(image_path: str,
                                   gamma=gamma,
                                   max_iter=max_iter,
                                   display=display)
+    
     return deblurred_image
 
 if __name__ == "__main__":
+    # This is how the professor can call our code.
     blur_and_deblur_image(image_path="/Users/rahulpadmanabhan/Code/ws3/convex_optimization/final_report/mcgill.jpg",
                           blur_type="gaussian",
                           blur_kernel_size=5,
                           blur_kernel_sigma=0.8,
+                          algorithm="admm",
+                          display=True)
+
+    blur_and_deblur_image(image_path="/Users/rahulpadmanabhan/Code/ws3/convex_optimization/final_report/mcgill.jpg",
+                          blur_type="motion",
+                          blur_kernel_size=5,
+                          blur_kernel_angle=45,
+                          algorithm="primal_dr",
+                          display=True)
+    
+    blur_and_deblur_image(image_path="/Users/rahulpadmanabhan/Code/ws3/convex_optimization/final_report/mcgill.jpg",
+                          blur_type="salt_pepper",
+                          blur_kernel_size=5,
+                          salt_prob=0.15,
+                          pepper_prob=0.15,
                           display=True)
