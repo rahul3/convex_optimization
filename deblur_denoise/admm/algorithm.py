@@ -19,6 +19,16 @@ def admm_solver(b: torch.Tensor,
                 **kwargs):
     """
     ADMM (Alternating Direction Method of Multipliers) Algorithm
+
+    Args:
+        b: torch.Tensor - The blurred image (H,W)
+        t: float - The step-size
+        rho: float - The relaxation parameter
+        gamma: float - The regularization parameter
+        kernel: torch.Tensor - The kernel
+        niters: int - The number of iterations
+    Returns:
+        torch.Tensor - The deblurred image (H,W)
     """
     t = 18 # step-size
     rho = 0.001 # relaxation parameter
