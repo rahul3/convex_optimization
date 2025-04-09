@@ -13,8 +13,8 @@ from ..utils.conv_utils import read_image, display_images, display_complex_outpu
 from ..op_math.python_code.multiplying_matrix import DeblurDenoiseOperators
 
 def chambolle_pock(b: torch.Tensor,
-                   objective_function: str="l1",
                    kernel: torch.Tensor,
+                   objective_function: str="l1",
                    t: float=0.4,
                    s: float=0.7,
                    gamma: float=0.01,
