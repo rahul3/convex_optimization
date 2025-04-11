@@ -7,17 +7,18 @@ import numpy as np
 from scipy import ndimage
 
 from ..core.convolution import circular_convolve2d
-from ..core.noise import add_gaussian_noise, create_motion_blur_kernel, gaussian_filter
-from ..core.proximal_operators import prox_l1, prox_box, prox_iso
+from ..core.noise import add_gaussian_noise, create_motion_blur_kernel
+from ..core.proximal_operators import prox_l1, prox_l2_squared, prox_box, prox_iso
 from ..utils.conv_utils import read_image, display_images, display_complex_output
 from ..op_math.python_code.multiplying_matrix import DeblurDenoiseOperators
 
 def chambolle_pock(b: torch.Tensor,
                    kernel: torch.Tensor,
+                   objective_function: str="l1",
                    t: float=0.4,
                    s: float=0.7,
                    gamma: float=0.01,
-                   max_iter: int=1000,
+                   max_iter: int=500,
                    **kwargs) -> torch.Tensor:
     """
     Chambolle-Pock algorithm for deblurring and denoising
@@ -46,9 +47,14 @@ def chambolle_pock(b: torch.Tensor,
         g_ast_input = torch.real(y_prev + s * A_z_prev)
 
         # Computing the proximal of g^\ast
-        c1 = g_ast_input[0] - s * b - s * prox_l1(g_ast_input[0]/s - b, 1/s)
+        if objective_function == "l1":
+            c1 = g_ast_input[0] - s * b - s * prox_l1(g_ast_input[0]/s - b, 1/s)
+        elif objective_function == "l2":
+            c1 = g_ast_input[0] - s * b - s * prox_l2_squared(g_ast_input[0]/s - b, 1/s)
+        else:
+            raise ValueError("Invalid objective function. Choose 'l1' or 'l2'.")
         c2 = g_ast_input[1:] - s *  prox_iso(g_ast_input[1:]/s, 1/s * gamma)
-        y_next = torch.cat((c1, c2), dim=0).clone()
+        y_next = torch.cat((c1, c2), dim =0).clone()
 
         # A^Ty
         A_T_y = dd_ops.apply_KTrans(y_next[0]) + dd_ops.apply_DTrans(y_next[1:].permute(1,2,0))
@@ -101,4 +107,3 @@ def chambolle_pock_test(image_path: str,
 
     # display
     display_images(b, x_sol, title1=f"Blurred Image - {blur_type}", title2="Deblurred Image")
-
