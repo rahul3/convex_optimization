@@ -6,33 +6,21 @@ from scipy import ndimage
 
 from ..core.convolution import circular_convolve2d
 from ..core.noise import add_gaussian_noise, create_motion_blur_kernel, gaussian_filter
-from ..core.proximal_operators import prox_l1, prox_box, prox_iso
+from ..core.proximal_operators import prox_l1, prox_l2_squared, prox_box, prox_iso
 from ..utils.conv_utils import read_image, display_images, display_complex_output
 from deblur_denoise.op_math.python_code.multiplying_matrix import DeblurDenoiseOperators
 
 def admm_solver(b: torch.Tensor,
+                objective_function: str="l1",
                 t: float=18, 
                 rho: float=0.001, 
                 gamma: float=0.5, 
                 kernel: torch.Tensor=None,
-                niters: int=1000,
+                niters: int=500,
                 **kwargs):
     """
     ADMM (Alternating Direction Method of Multipliers) Algorithm
-
-    Args:
-        b: torch.Tensor - The blurred image (H,W)
-        t: float - The step-size
-        rho: float - The relaxation parameter
-        gamma: float - The regularization parameter
-        kernel: torch.Tensor - The kernel
-        niters: int - The number of iterations
-    Returns:
-        torch.Tensor - The deblurred image (H,W)
     """
-    t = 18 # step-size
-    rho = 0.001 # relaxation parameter
-    gamma = 0.5
 
     imh, imw = b.shape
     # Same dimension as image
@@ -86,7 +74,12 @@ def admm_solver(b: torch.Tensor,
         A_x = torch.cat([K_prime, D_prime], dim=-1)
         # final term
         prox_param_ = torch.real(rho * A_x.permute(2, 0, 1) + (1 - rho) * y_prev + (1/t)*z_prev)
-        prox_K = b + prox_l1(prox_param_[0] - b,lambda_val=(1/t))
+        if objective_function == "l1":
+            prox_K = b + prox_l1(prox_param_[0] - b, lambda_val=(1/t))
+        elif objective_function == "l2":
+            prox_K = b + prox_l2_squared(prox_param_[0] - b, lambda_val=(1/t))
+        else:
+            raise ValueError("Invalid objective function. Choose 'l1' or 'l2'.")
         prox_D = prox_iso(prox_param_[1:], lambda_val=(1/t)*gamma)
         y_next = torch.cat([prox_K.unsqueeze(0), prox_D], dim=0)
 
@@ -203,5 +196,3 @@ def admm_solver_test(blur_type: str="gaussian",
 
 if __name__ == "__main__":
     admm_solver_test()
-
-
