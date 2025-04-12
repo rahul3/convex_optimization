@@ -4,15 +4,19 @@ Implementation of Chambolle-Pock Algorithm
 
 import torch
 import numpy as np
+import time
 from scipy import ndimage
-from typing import Callable
+from typing import Callable, List
+from pathlib import Path
 from ..core.convolution import circular_convolve2d
-from ..core.noise import create_motion_blur_kernel, gaussian_filter
-from ..core.loss import l1_loss, l2_loss, mse, psnr, ssim
+from ..core.blur import create_motion_blur_kernel, gaussian_filter
+from ..core.loss import mse, psnr
 from ..core.proximal_operators import prox_l1, prox_l2_squared, prox_box, prox_iso
-from ..utils.conv_utils import read_image, display_images, display_complex_output
+from ..utils.conv_utils import read_image, display_images
 from ..op_math.python_code.multiplying_matrix import DeblurDenoiseOperators
-from ..utils.logging_utils import log_execution_time, logger
+from ..utils.logging_utils import log_execution_time, logger, save_loss_data
+
+loss_list = []
 
 @log_execution_time(logger)
 def chambolle_pock(b: torch.Tensor,
@@ -23,10 +27,12 @@ def chambolle_pock(b: torch.Tensor,
                    gamma: float=0.01,
                    max_iter: int=500,
                    loss_function: Callable=psnr,
+                   save_loss: bool=False,
                    **kwargs) -> torch.Tensor:
     """
     Chambolle-Pock algorithm for deblurring and denoising
     """
+    start_time = int(time.time())
     logger.info(f'Running Chambolle-Pock with values: t={t}, s={s}, gamma={gamma}')
     dd_ops = DeblurDenoiseOperators(kernel, b.squeeze(), 1, 1)
 
@@ -76,14 +82,39 @@ def chambolle_pock(b: torch.Tensor,
         y_prev = y_next.clone()
         z_prev = z_next.clone()
 
-        if k % 50 == 0:
+        if k > 1:
             logger.info(f"Iteration {k} completed.")
             loss = loss_function(x_next, b)
             if type(loss) == torch.Tensor:
                 loss = loss.item()
+            if save_loss:
+                loss_list.append(loss)
 
     x_sol = x_next
     logger.info(f"{x_sol.shape=}")
+    
+    # Save loss data if requested
+    if save_loss and loss_list:
+        # Create parameter dictionary
+        parameters = {
+            't': t,
+            's': s,
+            'gamma': gamma,
+            'max_iter': max_iter,
+            'objective_function': objective_function
+        }
+        
+        # Get loss function name
+        loss_fn_name = getattr(loss_function, '__name__', str(loss_function))
+        
+        # Save the data
+        save_loss_data(
+            loss_list=loss_list,
+            algorithm_name="chambolle_pock",
+            loss_function_name=loss_fn_name,
+            parameters=parameters,
+            start_time=start_time
+        )
 
     return x_sol
 
@@ -93,7 +124,9 @@ def chambolle_pock_test(image_path: str,
                         blur_type: str="gaussian",
                         blur_kernel_size: int=5,
                         blur_kernel_sigma: float=0.8,
-                        blur_kernel_angle: float=45):
+                        blur_kernel_angle: float=45,
+                        save_loss: bool=False,
+                        **kwargs):
     """
     Test the Chambolle-Pock algorithm
     """
@@ -112,7 +145,7 @@ def chambolle_pock_test(image_path: str,
 
     logger.info(f"{b.shape=}")
 
-    x_sol = chambolle_pock(b, kernel)
+    x_sol = chambolle_pock(b, kernel, save_loss=save_loss, **kwargs)
 
     # display
     display_images(b, x_sol, title1=f"Blurred Image - {blur_type}", title2="Deblurred Image")

@@ -8,7 +8,7 @@ from scipy import ndimage
 from typing import Callable
 
 from ..core.convolution import circular_convolve2d
-from ..core.noise import create_motion_blur_kernel, gaussian_filter
+from ..core.blur import create_motion_blur_kernel, gaussian_filter
 from ..core.proximal_operators import prox_l1, prox_box, prox_iso, prox_l2_squared
 from ..utils.conv_utils import read_image, display_images, display_complex_output
 from ..op_math.python_code.multiplying_matrix import DeblurDenoiseOperators
@@ -26,8 +26,9 @@ def primal_dr_splitting(problem: str, kernel: torch.Tensor, b: torch.Tensor,
                             'tprimaldr': 2.0,
                             'rhoprimaldr': 0.1,
                             'tol': 10**-6
-                          }
-                        ) -> torch.Tensor:
+                          },
+                        save_loss: bool=False,
+                        **kwargs) -> torch.Tensor:
     """
     Primal Douglas-Rachford Splitting Algorithm.
 
@@ -130,7 +131,7 @@ def primal_dr_splitting_test(image_path: str,
                              blur_kernel_angle: float=45,
                              image_shape: tuple=(500, 500)):
     import matplotlib.pyplot as plt
-    from ..core.noise import create_motion_blur_kernel
+    from ..core.blur import create_motion_blur_kernel, gaussian_filter
     from ..core.convolution import circular_convolve2d
     from ..utils.conv_utils import read_image
 

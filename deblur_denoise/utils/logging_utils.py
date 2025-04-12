@@ -1,12 +1,17 @@
 import logging
 import time
+import pandas as pd
 from functools import wraps
 from pathlib import Path
-from typing import Callable, Any
+from typing import Callable, Any, List, Optional, Dict
 
 # Create logs directory if it doesn't exist
 log_dir = Path(__file__).parent.parent / "logs"
 log_dir.mkdir(exist_ok=True)
+
+# Create results directory if it doesn't exist
+results_dir = Path(__file__).parent.parent / "results"
+results_dir.mkdir(exist_ok=True)
 
 def setup_logger(name: str, log_file: str = "deblur_denoise.log") -> logging.Logger:
     """
@@ -75,6 +80,57 @@ def log_execution_time(logger: logging.Logger) -> Callable:
             return result
         return wrapper
     return decorator
+
+def save_loss_data(
+    loss_list: List[float],
+    algorithm_name: str,
+    loss_function_name: str,
+    parameters: Dict[str, Any],
+    start_time: Optional[int] = None,
+    filename: Optional[str] = None
+) -> None:
+    """
+    Save loss data to a CSV file.
+    
+    Args:
+        loss_list: List of loss values
+        algorithm_name: Name of the algorithm used
+        loss_function_name: Name of the loss function used
+        parameters: Dictionary of algorithm parameters
+        start_time: Start time of the algorithm (timestamp)
+        filename: Optional custom filename
+    """
+    # Get current timestamp if not provided
+    current_time = int(time.time())
+    start_time = start_time or current_time
+    
+    # Create dataframe
+    df = pd.DataFrame(loss_list, columns=['loss'])
+    df['algorithm'] = algorithm_name
+    df['loss_function'] = loss_function_name
+    df['time_taken'] = current_time - start_time
+    df['start_time'] = start_time
+    
+    # Add all parameters
+    for key, value in parameters.items():
+        df[key] = value
+    
+    # Generate filename
+    if filename is None:
+        filename = f"{algorithm_name}_{loss_function_name}_{start_time}.csv"
+    
+    # Save to file
+    file_path = results_dir / filename
+    if file_path.exists():
+        # If file exists, append without writing the header
+        df.to_csv(file_path, mode='a', header=False, index=False)
+        logger.info(f"Loss data appended to existing file {file_path}")
+    else:
+        # If file doesn't exist, create new file with header
+        df.to_csv(file_path, index=False)
+        logger.info(f"Loss data saved to new file {file_path}")
+    
+    return df
 
 # Create default logger instance
 logger = setup_logger("deblur_denoise") 

@@ -2,16 +2,20 @@
 Implementation of ADMM (Alternating Direction Method of Multipliers) Algorithm
 """
 import torch
-from scipy import ndimage
-from typing import Callable
+from typing import Callable, List
+import time
+from pathlib import Path
+import pandas as pd
 
 from ..core.convolution import circular_convolve2d
-from ..core.noise import add_gaussian_noise, create_motion_blur_kernel, gaussian_filter
+from ..core.blur import gaussian_filter, create_motion_blur_kernel
 from ..core.proximal_operators import prox_l1, prox_l2_squared, prox_box, prox_iso
 from ..utils.conv_utils import read_image, display_images, display_complex_output
-from ..utils.logging_utils import logger, log_execution_time
+from ..utils.logging_utils import logger, log_execution_time, save_loss_data
 from ..op_math.python_code.multiplying_matrix import DeblurDenoiseOperators
 from ..core.loss import psnr, l1_loss, l2_loss, mse, ssim
+
+loss_list = []
 
 @log_execution_time(logger)
 def admm_solver(b: torch.Tensor,
@@ -22,10 +26,14 @@ def admm_solver(b: torch.Tensor,
                 kernel: torch.Tensor=None,
                 niters: int=500,
                 loss_function: Callable=psnr,
+                save_loss: bool=False,
                 **kwargs):
     """
     ADMM (Alternating Direction Method of Multipliers) Algorithm
     """
+    # Get current time in seconds for performance measurement
+    start_time = int(time.time())
+
     logger.info(f"Starting ADMM solver with parameters: t={t}, rho={rho}, gamma={gamma}, niters={niters}")
     logger.info(f"Objective function: {objective_function}")
 
@@ -124,6 +132,8 @@ def admm_solver(b: torch.Tensor,
                 diff = loss_function(sol, b)
                 if type(diff) == torch.Tensor:
                     diff = diff.item()
+                if save_loss:
+                    loss_list.append(diff)
                 
                 logger.info(f"Relative difference at iteration {i}: {diff:.6f}")
                 
@@ -147,6 +157,29 @@ def admm_solver(b: torch.Tensor,
 
     sol_param = u_next + A_T_y - (1/t)*(w_next + A_T_z)
     sol = torch.real(dd_ops.invert_matrix(sol_param))
+    
+    # Save loss data if requested
+    if save_loss and loss_list:
+        # Create parameter dictionary
+        parameters = {
+            't': t,
+            'rho': rho,
+            'gamma': gamma,
+            'niters': niters,
+            'objective_function': objective_function
+        }
+        
+        # Get loss function name
+        loss_fn_name = getattr(loss_function, '__name__', str(loss_function))
+        
+        # Save the data
+        save_loss_data(
+            loss_list=loss_list,
+            algorithm_name="admm",
+            loss_function_name=loss_fn_name,
+            parameters=parameters,
+            start_time=start_time
+        )
 
     return sol
 
@@ -156,7 +189,8 @@ def admm_solver_test(blur_type: str="gaussian",
                      blur_kernel_sigma: float=0.8,
                      blur_kernel_angle: float=45,
                      image_path: str=None,
-                     image_shape: tuple=(500, 500)):
+                     image_shape: tuple=(500, 500),
+                     save_loss: bool=False):
     """
     Test function for ADMM solver during development
     """
@@ -186,7 +220,7 @@ def admm_solver_test(blur_type: str="gaussian",
     display_images(image, blurred, title1="Original", title2="Blurred")
     
     # Run the solver
-    result = admm_solver(b=blurred.squeeze(0).clone(), kernel=kernel, t=T, rho=RHO, gamma=GAMMA)
+    result = admm_solver(b=blurred.squeeze(0).clone(), kernel=kernel, t=T, rho=RHO, gamma=GAMMA, save_loss=save_loss)
     
     # Display results
     display_images(blurred, result, 
