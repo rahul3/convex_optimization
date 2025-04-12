@@ -8,8 +8,10 @@ from ..core.convolution import circular_convolve2d
 from ..core.noise import add_gaussian_noise, create_motion_blur_kernel, gaussian_filter
 from ..core.proximal_operators import prox_l1, prox_l2_squared, prox_box, prox_iso
 from ..utils.conv_utils import read_image, display_images, display_complex_output
+from ..utils.logging_utils import logger, log_execution_time
 from deblur_denoise.op_math.python_code.multiplying_matrix import DeblurDenoiseOperators
 
+@log_execution_time(logger)
 def admm_solver(b: torch.Tensor,
                 objective_function: str="l1",
                 t: float=18, 
@@ -21,6 +23,8 @@ def admm_solver(b: torch.Tensor,
     """
     ADMM (Alternating Direction Method of Multipliers) Algorithm
     """
+    logger.info(f"Starting ADMM solver with parameters: t={t}, rho={rho}, gamma={gamma}, niters={niters}")
+    logger.info(f"Objective function: {objective_function}")
 
     imh, imw = b.shape
     # Same dimension as image
@@ -94,7 +98,7 @@ def admm_solver(b: torch.Tensor,
 
         # Checking if the solution is converging
         if i % 100 == 0:
-            print(f"iteration {i} completed")
+            logger.info(f"Iteration {i} completed")
             K_T_y = dd_ops.apply_KTrans(y_next[0]) # to get K^T y , we use the y[0]
             y_12 = torch.stack([y_next[1], y_next[2]], dim=0) # the part of y that interacts with D 
             y_12 = y_12.permute(1, 2, 0) # because of the way the apply_DTrans is implemented (convert from (2,100,100) to (100, 100, 2))
@@ -115,12 +119,11 @@ def admm_solver(b: torch.Tensor,
             # Calculate and display the difference between current solution and previous solution
             if i > 0:  # Skip the first check since we don't have a previous solution to compare
                 diff = torch.norm(sol - prev_sol) / torch.norm(prev_sol)
-                print(f"Relative difference at iteration {i}: {diff:.6f}")
+                logger.info(f"Relative difference at iteration {i}: {diff:.6f}")
                 
-                # display_images(b, sol)
                 tol = 1e-4
                 if diff < tol:  
-                    print(f"Converged at iteration {i} with relative difference {diff:.6f}")
+                    logger.info(f"Converged at iteration {i} with relative difference {diff:.6f}")
                     break
             
     # building the final solution
@@ -139,9 +142,9 @@ def admm_solver(b: torch.Tensor,
     sol_param = u_next + A_T_y - (1/t)*(w_next + A_T_z)
     sol = torch.real(dd_ops.invert_matrix(sol_param))
 
-    # display_images(b, sol, title1="Blurred", title2="Deblurred")
     return sol
 
+@log_execution_time(logger)
 def admm_solver_test(blur_type: str="gaussian",
                      blur_kernel_size: int=5,
                      blur_kernel_sigma: float=0.8,
@@ -158,12 +161,11 @@ def admm_solver_test(blur_type: str="gaussian",
     RHO = 0.001  # Relaxation parameter
     GAMMA = 0.5  # Regularization parameter
     
-    print("Loading image...")
+    logger.info("Loading image...")
     image = read_image(IMAGE_PATH, shape=IMAGE_SHAPE)
-    print(f"Image shape: {image.shape}")
+    logger.info(f"Image shape: {image.shape}")
     
-    print("\nRunning ADMM solver...")
-    print(f"Parameters: t={T}, rho={RHO}, gamma={GAMMA}")
+    logger.info(f"\nRunning ADMM solver with parameters: t={T}, rho={RHO}, gamma={GAMMA}")
     
     # Create a simple blur kernel for testing
     if blur_type == "gaussian":
@@ -190,9 +192,9 @@ def admm_solver_test(blur_type: str="gaussian",
     max_pixel = torch.max(image)
     psnr = 10 * torch.log10((max_pixel ** 2) / mse)
     
-    print(f"\nMetrics:")
-    print(f"MSE: {mse.item():.6f}")
-    print(f"PSNR: {psnr.item():.2f} dB")
+    logger.info(f"\nMetrics:")
+    logger.info(f"MSE: {mse.item():.6f}")
+    logger.info(f"PSNR: {psnr.item():.2f} dB")
 
 if __name__ == "__main__":
     admm_solver_test()
