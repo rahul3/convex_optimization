@@ -5,16 +5,26 @@ Implementation of Primal-Dual Douglas-Rachford Splitting Algorithm
 import torch
 import numpy as np
 from scipy import ndimage
+from typing import Callable
 
 from ..op_math.python_code.multiplying_matrix import * 
 from ..utils.conv_utils import *
 from ..core.convolution import circular_convolve2d
 from ..core.proximal_operators import prox_box, prox_l1, prox_iso
 from ..core.noise import gaussian_filter, create_motion_blur_kernel
+from ..core.loss import l2_loss, l1_loss, psnr, mse, ssim
+from ..utils.logging_utils import logger, log_execution_time
 
 
-def primal_dual_dr_splitting(b: torch.Tensor , kernel : torch.Tensor, 
-                              max_iter=1000, t = 3, rho = 0.4, gamma = 0.03, tol=1e-6):
+@log_execution_time(logger)
+def primal_dual_dr_splitting(b: torch.Tensor,
+                             kernel : torch.Tensor, 
+                             max_iter: int=1000, 
+                             t: float=3, 
+                             rho: float=0.4, 
+                             gamma: float=0.03,
+                             loss_function: Callable=l2_loss,
+                             tol: float=1e-6):
     """
     Primal-Dual Douglas-Rachford Splitting Algorithm
     
@@ -77,6 +87,15 @@ def primal_dual_dr_splitting(b: torch.Tensor , kernel : torch.Tensor,
         p = torch.real(p + rho * (w - x))
         q = torch.real(q + rho * (v - z))
 
+        if k > 1:
+            logger.info(f"Iteration {k} completed.")
+            loss_val = loss_function(prox_box(p, 1), b)
+            if type(loss_val) == torch.Tensor:
+                loss_val = loss_val.item()
+            if loss_val < tol:
+                logger.info(f"Converged at iteration {k} with relative difference {loss_val:.6f}")
+                break
+
     x_sol = prox_box(p, 1)
     return x_sol
 
@@ -100,6 +119,6 @@ def test_primal_dual_dr_splitting(image_path: str,
 
     x_sol = primal_dual_dr_splitting(blurred, kernel)
 
-    display_images(img, x_sol, title1=f"Blurred Image - {blur_type}", title2="Deblurred Image")
+    display_images(img, x_sol, title1=f"Blurred Image - {blur_type}", title2="Deblurred Image - Primal Dual DR")
 
     return x_sol

@@ -1,3 +1,6 @@
+import torch
+from typing import Callable
+
 from deblur_denoise.admm.algorithm import admm_solver
 from deblur_denoise.chambolle_pock.algorithm import chambolle_pock
 from deblur_denoise.primal_dual_dr.algorithm import primal_dual_dr_splitting
@@ -6,8 +9,8 @@ from deblur_denoise.primal_dr.algorithm import primal_dr_splitting
 from deblur_denoise.core.convolution import circular_convolve2d
 from deblur_denoise.core.noise import add_salt_pepper_noise, add_poisson_noise, add_speckle_noise, gaussian_filter, create_motion_blur_kernel
 from deblur_denoise.utils.conv_utils import display_images, read_image
+from deblur_denoise.core.loss import ssim, psnr, mse, l1_loss, l2_loss
 
-import torch
 
 def blur_image(image_path: str,
                blur_type: str="gaussian",
@@ -60,6 +63,7 @@ def blur_image(image_path: str,
 def deblur_image(noisy_image: torch.Tensor,
                  algorithm: str="admm",
                  display: bool=False,
+                 loss_function: Callable=ssim,
                  **kwargs) -> torch.Tensor:
     """
     Deblur an image based on the specified algorithm.
@@ -72,13 +76,13 @@ def deblur_image(noisy_image: torch.Tensor,
     kernel = kwargs.get("kernel", None)
 
     if algorithm == "admm":
-        deblurred_image = admm_solver(b=noisy_image, kernel=kernel, t=t, rho=rho, gamma=gamma, niters=niters)
+        deblurred_image = admm_solver(b=noisy_image, kernel=kernel, t=t, rho=rho, gamma=gamma, niters=niters, loss_function=loss_function)
     elif algorithm == "chambolle_pock":
-        deblurred_image = chambolle_pock(b=noisy_image.unsqueeze(0), kernel=kernel, t=t, s=s, gamma=gamma, max_iter=niters)
+        deblurred_image = chambolle_pock(b=noisy_image.unsqueeze(0), kernel=kernel, t=t, s=s, gamma=gamma, max_iter=niters, loss_function=loss_function)
     elif algorithm == "primal_dual_dr":
-        deblurred_image = primal_dual_dr_splitting(noisy_image) # TODO: Add functionality
+        deblurred_image = primal_dual_dr_splitting(noisy_image, loss_function=loss_function) # TODO: Add functionality
     elif algorithm == "primal_dr":
-        deblurred_image = primal_dr_splitting(problem="primal_dr", b=noisy_image, kernel=kernel) # TODO: Add functionality
+        deblurred_image = primal_dr_splitting(problem="primal_dr", b=noisy_image, kernel=kernel, loss_function=loss_function) # TODO: Add functionality
     else:
         raise NotImplementedError(f"Algorithm {algorithm} not implemented")
     
@@ -104,7 +108,8 @@ def blur_and_deblur_image(image_path: str,
                           mean: float=0.0,
                           std: float=0.1,
                           scale: float=1.0,
-                          max_iter: int=1000) -> torch.Tensor:
+                          max_iter: int=1000,
+                          loss_function: Callable=ssim) -> torch.Tensor:
     """
     Blur and deblur an image.
     """
@@ -135,29 +140,55 @@ def blur_and_deblur_image(image_path: str,
                                   s=s,
                                   gamma=gamma,
                                   max_iter=max_iter,
-                                  display=display)
+                                  display=display,
+                                  loss_function=loss_function)
     
     return deblurred_image
 
 if __name__ == "__main__":
+    from deblur_denoise.core.loss import ssim
     # This is how the professor can call our code.
-    blur_and_deblur_image(image_path="/Users/rahulpadmanabhan/Code/ws3/convex_optimization/final_report/mcgill.jpg",
+    # Example 1:
+
+    # Gaussian blur and deblur with admm with PSNR loss function (default)
+    blur_and_deblur_image(image_path="/Users/rahulpadmanabhan/Code/ws3/convex_optimization/deblur_denoise/utils/sample_images/dog.jpg",
                           blur_type="gaussian",
                           blur_kernel_size=5,
                           blur_kernel_sigma=0.8,
                           algorithm="admm",
                           display=True)
 
-    blur_and_deblur_image(image_path="/Users/rahulpadmanabhan/Code/ws3/convex_optimization/final_report/mcgill.jpg",
+    # Motion blur and deblur with primal_dr with PSNR loss function (default)
+    blur_and_deblur_image(image_path="/Users/rahulpadmanabhan/Code/ws3/convex_optimization/deblur_denoise/utils/sample_images/dog.jpg",
                           blur_type="motion",
                           blur_kernel_size=5,
                           blur_kernel_angle=45,
                           algorithm="primal_dr",
                           display=True)
     
-    blur_and_deblur_image(image_path="/Users/rahulpadmanabhan/Code/ws3/convex_optimization/final_report/mcgill.jpg",
+    # Salt and pepper noise and deblur with chambolle_pock (which is the default algorithm) with PSNR loss function (default)
+    blur_and_deblur_image(image_path="/Users/rahulpadmanabhan/Code/ws3/convex_optimization/deblur_denoise/utils/sample_images/dog.jpg",
                           blur_type="salt_pepper",
                           blur_kernel_size=5,
                           salt_prob=0.15,
                           pepper_prob=0.15,
                           display=True)
+    
+    # Salt and pepper noise and deblur with chambolle_pock with ssim loss function
+    blur_and_deblur_image(image_path="/Users/rahulpadmanabhan/Code/ws3/convex_optimization/deblur_denoise/utils/sample_images/dog.jpg",
+                          blur_type="salt_pepper",
+                          blur_kernel_size=5,
+                          salt_prob=0.15,
+                          pepper_prob=0.15,
+                          algorithm="chambolle_pock",
+                          loss_function=ssim,
+                          display=True)
+    
+    # Gaussian blur and deblur with admm with ssim loss function
+    blur_and_deblur_image(image_path="/Users/rahulpadmanabhan/Code/ws3/convex_optimization/deblur_denoise/utils/sample_images/dog.jpg",
+                          blur_type="gaussian",
+                          blur_kernel_size=5,
+                          blur_kernel_sigma=0.8,
+                          algorithm="admm",
+                          display=True,
+                          loss_function=ssim)
