@@ -3,7 +3,7 @@ from setuptools import setup, find_packages
 setup(
     name="convex_optimization",
     version="0.1.0",
-    packages=find_packages(include=['deblur_denoise', 'deblur_denoise.*']),
+    packages=find_packages(),
     install_requires=[
         "matplotlib==3.10.0",
         "numpy==1.26.4",
