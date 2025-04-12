@@ -1,6 +1,7 @@
 import torch
 from .apply_periodic_conv_2d import apply_periodic_conv_2d
 from .eig_vals_for_periodic_conv_op import eig_vals_for_periodic_conv_op
+import numpy as np
 
 class DeblurDenoiseOperators:
     """
@@ -33,6 +34,9 @@ class DeblurDenoiseOperators:
         self.device = device
         
         # Move input tensors to the specified device
+        if type(self.kernel) == np.ndarray:
+            self.kernel = torch.from_numpy(self.kernel)
+
         if self.kernel.device != self.device:
             self.kernel = self.kernel.to(self.device)
         

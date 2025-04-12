@@ -122,6 +122,7 @@ convex_optimization/
      - Uninstall the current package
      - Reinstall it in development mode
      - Run the test suite
+     - The environment variable `CO_IMAGE_PATH` can be set to specify the image path for testing
 
    b. Using the command line:
    ```bash

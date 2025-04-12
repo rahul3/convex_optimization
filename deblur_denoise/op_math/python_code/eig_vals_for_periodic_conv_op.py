@@ -1,5 +1,6 @@
 import torch
 import torch.nn.functional as F
+import numpy as np
 
 def eig_vals_for_periodic_conv_op(filter_kernel, num_rows, num_cols):
     """
@@ -24,6 +25,8 @@ def eig_vals_for_periodic_conv_op(filter_kernel, num_rows, num_cols):
     This is equivalent to the MATLAB's eigValsForPeriodicConvOp function.
     """
     # Construct the impulse: customary to put this in the upper left hand corner pixel
+    if type(filter_kernel) == np.ndarray:
+        filter_kernel = torch.from_numpy(filter_kernel)
     a = torch.zeros((num_rows, num_cols), device=filter_kernel.device)
     a[0, 0] = 1
     

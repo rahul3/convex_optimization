@@ -5,15 +5,20 @@ Implementation of Primal Douglas-Rachford Splitting Algorithm
 import torch
 import numpy as np
 from scipy import ndimage
+from typing import Callable
 
 from ..core.convolution import circular_convolve2d
 from ..core.noise import create_motion_blur_kernel, gaussian_filter
 from ..core.proximal_operators import prox_l1, prox_box, prox_iso, prox_l2_squared
 from ..utils.conv_utils import read_image, display_images, display_complex_output
-from deblur_denoise.op_math.python_code.multiplying_matrix import DeblurDenoiseOperators
+from ..op_math.python_code.multiplying_matrix import DeblurDenoiseOperators
+from ..utils.logging_utils import log_execution_time, logger
+from ..core.loss import psnr, l1_loss, l2_loss, mse, ssim
 
+@log_execution_time(logger)
 def primal_dr_splitting(problem: str, kernel: torch.Tensor, b: torch.Tensor,
                         image_path: str = None, shape: tuple = (100, 100),
+                        loss_function: Callable=l2_loss,
                         i: dict = {
                             'maxiter': 500, 
                             'gammal1': 0.049,
@@ -90,18 +95,22 @@ def primal_dr_splitting(problem: str, kernel: torch.Tensor, b: torch.Tensor,
         #z2 = z2.real
 
         if j == 0 or j == 15: # debug
-        #    print(prox_box(z1, i.get('tprimaldr')))
-            print(_l2_norm(z1, z1prev))
-        #    plt.imshow(prox_box(z1, i.get('tprimaldr')).squeeze().numpy(), cmap='gray')
-        #    plt.show()
+            logger.info(loss_function(z1, b))
+
+        if j % 50 == 0:
+            logger.info(f"Iteration {j} completed.")
+            loss_function(z1, b)
         
-        if _l2_norm(z1, z1prev) < i.get('tol'):
+        loss_val = loss_function(z1, z1prev)
+        if type(loss_val) == torch.Tensor:
+            loss_val = loss_val.item()
+        if loss_val < i.get('tol'):
             exited_via_break = True
             break
     
     if not exited_via_break:
-        print(f"Warning: maxiter reached ({i.get('maxiter')}), primal_dr did not converge")
-        print(_l2_norm(z1, z1prev))
+        logger.info(f"Warning: maxiter reached ({i.get('maxiter')}), primal_dr did not converge")
+        logger.info(loss_function(z1, z1prev))
     
     return prox_box(z1, i.get('tprimaldr'))
 
@@ -132,19 +141,6 @@ def primal_dr_splitting_test(image_path: str,
     elif blur_type == "gaussian":
         motion_kernel = gaussian_filter(size=[blur_kernel_size, blur_kernel_size], sigma=blur_kernel_sigma)
     motion_blurred = circular_convolve2d(image, motion_kernel)
-
-    #plt.subplot(1, 2, 1)
-    #plt.imshow(image.squeeze().numpy(), cmap="gray")
-    #plt.title("Original Image")
-    #plt.axis("off")
-
-    #plt.subplot(1, 2, 2)
-    #plt.imshow(motion_blurred.squeeze().numpy(), cmap="gray")
-    #plt.title("Motion Blur")
-    #plt.axis("off")
-
-    #plt.tight_layout()
-    #plt.show()
 
     res = primal_dr_splitting('l2', create_motion_blur_kernel(), 
                             motion_blurred.squeeze(),

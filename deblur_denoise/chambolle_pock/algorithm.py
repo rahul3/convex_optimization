@@ -5,24 +5,29 @@ Implementation of Chambolle-Pock Algorithm
 import torch
 import numpy as np
 from scipy import ndimage
-
+from typing import Callable
 from ..core.convolution import circular_convolve2d
-from ..core.noise import add_gaussian_noise, create_motion_blur_kernel
-from ..core.proximal_operators import prox_l1, prox_box, prox_iso
+from ..core.noise import create_motion_blur_kernel, gaussian_filter
+from ..core.loss import l1_loss, l2_loss, mse, psnr, ssim
+from ..core.proximal_operators import prox_l1, prox_l2_squared, prox_box, prox_iso
 from ..utils.conv_utils import read_image, display_images, display_complex_output
 from ..op_math.python_code.multiplying_matrix import DeblurDenoiseOperators
+from ..utils.logging_utils import log_execution_time, logger
 
+@log_execution_time(logger)
 def chambolle_pock(b: torch.Tensor,
                    kernel: torch.Tensor,
+                   objective_function: str="l1",
                    t: float=0.4,
                    s: float=0.7,
                    gamma: float=0.01,
-                   max_iter: int=1000,
+                   max_iter: int=500,
+                   loss_function: Callable=psnr,
                    **kwargs) -> torch.Tensor:
     """
     Chambolle-Pock algorithm for deblurring and denoising
     """
-    print(f'Running Chambolle-Pock with values: t={t}, s={s}, gamma={gamma}')
+    logger.info(f'Running Chambolle-Pock with values: t={t}, s={s}, gamma={gamma}')
     dd_ops = DeblurDenoiseOperators(kernel, b.squeeze(), 1, 1)
 
     n_rows, n_cols = b.squeeze().shape
@@ -46,7 +51,12 @@ def chambolle_pock(b: torch.Tensor,
         g_ast_input = torch.real(y_prev + s * A_z_prev)
 
         # Computing the proximal of g^\ast
-        c1 = g_ast_input[0] - s * b - s * prox_l1(g_ast_input[0]/s - b, 1/s)
+        if objective_function == "l1":
+            c1 = g_ast_input[0] - s * b - s * prox_l1(g_ast_input[0]/s - b, 1/s)
+        elif objective_function == "l2":
+            c1 = g_ast_input[0] - s * b - s * prox_l2_squared(g_ast_input[0]/s - b, 1/s)
+        else:
+            raise ValueError("Invalid objective function. Choose 'l1' or 'l2'.")
         c2 = g_ast_input[1:] - s *  prox_iso(g_ast_input[1:]/s, 1/s * gamma)
         y_next = torch.cat((c1, c2), dim =0).clone()
 
@@ -66,9 +76,14 @@ def chambolle_pock(b: torch.Tensor,
         y_prev = y_next.clone()
         z_prev = z_next.clone()
 
+        if k % 50 == 0:
+            logger.info(f"Iteration {k} completed.")
+            loss = loss_function(x_next, b)
+            if type(loss) == torch.Tensor:
+                loss = loss.item()
 
     x_sol = x_next
-    print(f"{x_sol.shape=}")
+    logger.info(f"{x_sol.shape=}")
 
     return x_sol
 
@@ -95,10 +110,9 @@ def chambolle_pock_test(image_path: str,
     b = circular_convolve2d(img, kernel)
 
 
-    print(f"{b.shape=}")
+    logger.info(f"{b.shape=}")
 
     x_sol = chambolle_pock(b, kernel)
 
     # display
     display_images(b, x_sol, title1=f"Blurred Image - {blur_type}", title2="Deblurred Image")
-
