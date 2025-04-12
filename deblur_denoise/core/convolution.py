@@ -15,7 +15,8 @@ sys.path.append(str(Path(__file__).parent.absolute()))
 # Add the parent directory to the system path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from utils.conv_utils import read_image
-from noise import add_gaussian_noise, add_salt_pepper_noise, add_poisson_noise, add_speckle_noise, create_motion_blur_kernel
+from noise import add_gaussian_noise, add_salt_pepper_noise, add_poisson_noise, add_speckle_noise
+from blur import create_motion_blur_kernel, gaussian_filter
 
 
 def circular_convolve2d(image, kernel):

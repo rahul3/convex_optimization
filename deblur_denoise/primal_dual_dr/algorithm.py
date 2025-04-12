@@ -11,7 +11,7 @@ from ..op_math.python_code.multiplying_matrix import *
 from ..utils.conv_utils import *
 from ..core.convolution import circular_convolve2d
 from ..core.proximal_operators import prox_box, prox_l1, prox_iso
-from ..core.noise import gaussian_filter, create_motion_blur_kernel
+from ..core.blur import gaussian_filter, create_motion_blur_kernel
 from ..core.loss import l2_loss, l1_loss, psnr, mse, ssim
 from ..utils.logging_utils import logger, log_execution_time
 
@@ -24,7 +24,9 @@ def primal_dual_dr_splitting(b: torch.Tensor,
                              rho: float=0.4, 
                              gamma: float=0.03,
                              loss_function: Callable=l2_loss,
-                             tol: float=1e-6):
+                             tol: float=1e-6,
+                             save_loss: bool=False,
+                             **kwargs) -> torch.Tensor:
     """
     Primal-Dual Douglas-Rachford Splitting Algorithm
     
