@@ -3,13 +3,15 @@ Implementation of ADMM (Alternating Direction Method of Multipliers) Algorithm
 """
 import torch
 from scipy import ndimage
+from typing import Callable
 
 from ..core.convolution import circular_convolve2d
 from ..core.noise import add_gaussian_noise, create_motion_blur_kernel, gaussian_filter
 from ..core.proximal_operators import prox_l1, prox_l2_squared, prox_box, prox_iso
 from ..utils.conv_utils import read_image, display_images, display_complex_output
 from ..utils.logging_utils import logger, log_execution_time
-from deblur_denoise.op_math.python_code.multiplying_matrix import DeblurDenoiseOperators
+from ..op_math.python_code.multiplying_matrix import DeblurDenoiseOperators
+from ..core.loss import psnr, l1_loss, l2_loss, mse, ssim
 
 @log_execution_time(logger)
 def admm_solver(b: torch.Tensor,
@@ -19,6 +21,7 @@ def admm_solver(b: torch.Tensor,
                 gamma: float=0.5, 
                 kernel: torch.Tensor=None,
                 niters: int=500,
+                loss_function: Callable=psnr,
                 **kwargs):
     """
     ADMM (Alternating Direction Method of Multipliers) Algorithm
@@ -97,7 +100,7 @@ def admm_solver(b: torch.Tensor,
         z_prev = z_next
 
         # Checking if the solution is converging
-        if i % 100 == 0:
+        if i > 1:
             logger.info(f"Iteration {i} completed")
             K_T_y = dd_ops.apply_KTrans(y_next[0]) # to get K^T y , we use the y[0]
             y_12 = torch.stack([y_next[1], y_next[2]], dim=0) # the part of y that interacts with D 
@@ -117,8 +120,11 @@ def admm_solver(b: torch.Tensor,
             prev_sol = sol.clone()
 
             # Calculate and display the difference between current solution and previous solution
-            if i > 0:  # Skip the first check since we don't have a previous solution to compare
-                diff = torch.norm(sol - prev_sol) / torch.norm(prev_sol)
+            if i > 1:  # Skip the first check since we don't have a previous solution to compare
+                diff = loss_function(sol, b)
+                if type(diff) == torch.Tensor:
+                    diff = diff.item()
+                
                 logger.info(f"Relative difference at iteration {i}: {diff:.6f}")
                 
                 tol = 1e-4
@@ -185,16 +191,16 @@ def admm_solver_test(blur_type: str="gaussian",
     # Display results
     display_images(blurred, result, 
                   title1=f"Blurred Image - {blur_type}", 
-                  title2="Deblurred Image")
+                  title2="Deblurred Image - ADMM")
     
     # Calculate metrics
-    mse = torch.mean((result - image) ** 2)
+    mean_squared_error = mse(result, image)
     max_pixel = torch.max(image)
-    psnr = 10 * torch.log10((max_pixel ** 2) / mse)
+    psnr_value = psnr(result, image, max_pixel)
     
     logger.info(f"\nMetrics:")
-    logger.info(f"MSE: {mse.item():.6f}")
-    logger.info(f"PSNR: {psnr.item():.2f} dB")
+    logger.info(f"MSE: {mean_squared_error.item():.6f}")
+    logger.info(f"PSNR: {psnr_value.item():.2f} dB")
 
 if __name__ == "__main__":
     admm_solver_test()
