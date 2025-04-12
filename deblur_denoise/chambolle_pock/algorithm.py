@@ -7,7 +7,7 @@ import numpy as np
 from scipy import ndimage
 
 from ..core.convolution import circular_convolve2d
-from ..core.noise import add_gaussian_noise, create_motion_blur_kernel
+from ..core.noise import create_motion_blur_kernel, gaussian_filter
 from ..core.proximal_operators import prox_l1, prox_l2_squared, prox_box, prox_iso
 from ..utils.conv_utils import read_image, display_images, display_complex_output
 from ..op_math.python_code.multiplying_matrix import DeblurDenoiseOperators
