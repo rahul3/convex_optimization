@@ -99,6 +99,7 @@ def deblur_image(noisy_image: torch.Tensor,
     rho = kwargs.get("rho", 0.001)
     gamma = kwargs.get("gamma", 0.5)
     niters = kwargs.get("niters", 1000)
+    tol = kwargs.get("tol", 1e-6)
     s = kwargs.get("s", 0.7)
     kernel = kwargs.get("kernel", None)
 
@@ -107,9 +108,9 @@ def deblur_image(noisy_image: torch.Tensor,
     elif algorithm == "chambolle_pock":
         deblurred_image = chambolle_pock(b=noisy_image.unsqueeze(0), kernel=kernel, t=t, s=s, gamma=gamma, max_iter=niters, loss_function=loss_function, save_loss=save_loss)
     elif algorithm == "primal_dual_dr":
-        deblurred_image = primal_dual_dr_splitting(noisy_image, loss_function=loss_function, save_loss=save_loss) # TODO: Add functionality
+        deblurred_image = primal_dual_dr_splitting(b=noisy_image, kernel=kernel, niters=niters, t=t, rho=rho, gamma=gamma, tol=tol, loss_function=loss_function, save_loss=save_loss)
     elif algorithm == "primal_dr":
-        deblurred_image = primal_dr_splitting(problem="primal_dr", b=noisy_image, kernel=kernel, t=t, gamma=gamma, rho=rho, niters=niters, loss_function=loss_function, save_loss=save_loss) # TODO: Add functionality
+        deblurred_image = primal_dr_splitting(problem="primal_dr", b=noisy_image, kernel=kernel, t=t, gamma=gamma, rho=rho, tol=tol, niters=niters, loss_function=loss_function, save_loss=save_loss) 
     else:
         raise NotImplementedError(f"Algorithm {algorithm} not implemented")
     
@@ -138,6 +139,7 @@ def blur_and_deblur_image(image_path: str,
                           algorithm: str="chambolle_pock",
                           t: float=0.4,
                           s: float=0.7,
+                          rho: float=0.4,
                           gamma: float=0.01,
                           salt_prob: float=0.15,
                           pepper_prob: float=0.15,
@@ -408,17 +410,34 @@ if __name__ == "__main__":
     #                 loss_function=ssim)
     
 
+    # blur_and_deblur_image(image_path="/Users/rahulpadmanabhan/Code/ws3/convex_optimization/deblur_denoise/utils/sample_images/dog.jpg",
+    #                 image_shape=(300, 300),
+    #                 t=15,
+    #                 gamma=0.3,
+    #                 niters=500,
+    #                 blur_type="gaussian",
+    #                 noise_type="gaussian",
+    #                 blur_kernel_size=5,
+    #                 blur_kernel_sigma=0.8,
+    #                 algorithm="primal_dr",
+    #                 display=True,
+    #                 save_loss=True,
+    #                 save_path="/Users/rahulpadmanabhan/Code/ws3/convex_optimization/deblur_denoise/results",
+    #                 loss_function=psnr)
+    
+
     blur_and_deblur_image(image_path="/Users/rahulpadmanabhan/Code/ws3/convex_optimization/deblur_denoise/utils/sample_images/dog.jpg",
-                    image_shape=(300, 300),
-                    t=15,
-                    gamma=0.3,
-                    niters=500,
-                    blur_type="gaussian",
-                    noise_type="gaussian",
-                    blur_kernel_size=5,
-                    blur_kernel_sigma=0.8,
-                    algorithm="primal_dr",
-                    display=True,
-                    save_loss=True,
-                    save_path="/Users/rahulpadmanabhan/Code/ws3/convex_optimization/deblur_denoise/results",
-                    loss_function=psnr)
+                image_shape=(300, 300),
+                t=1.4,
+                rho=0.9,
+                gamma=0.02,
+                niters=500,
+                blur_type="gaussian",
+                noise_type="gaussian",
+                blur_kernel_size=5,
+                blur_kernel_sigma=0.8,
+                algorithm="primal_dual_dr",
+                display=True,
+                save_loss=True,
+                save_path="/Users/rahulpadmanabhan/Code/ws3/convex_optimization/deblur_denoise/results",
+                loss_function=psnr)
