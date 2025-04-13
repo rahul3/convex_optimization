@@ -101,7 +101,7 @@ def save_loss_data(
         filename: Optional custom filename
     """
     # Get current timestamp if not provided
-    current_time = int(time.time())
+    current_time = time.time()
     start_time = start_time or current_time
     
     # Create dataframe
