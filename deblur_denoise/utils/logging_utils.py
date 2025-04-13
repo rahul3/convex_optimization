@@ -1,3 +1,4 @@
+import os
 import logging
 import time
 import pandas as pd
@@ -12,6 +13,9 @@ log_dir.mkdir(exist_ok=True)
 # Create results directory if it doesn't exist
 results_dir = Path(__file__).parent.parent / "results"
 results_dir.mkdir(exist_ok=True)
+
+CO_FILE_LOGLEVEL = logging.DEBUG if os.environ.get("CO_FILE_LOGLEVEL") == "DEBUG" else logging.INFO
+CO_CONSOLE_LOGLEVEL = logging.DEBUG if os.environ.get("CO_CONSOLE_LOGLEVEL") == "DEBUG" else logging.INFO
 
 def setup_logger(name: str, log_file: str = "deblur_denoise.log") -> logging.Logger:
     """
@@ -42,12 +46,12 @@ def setup_logger(name: str, log_file: str = "deblur_denoise.log") -> logging.Log
     
     # File handler
     file_handler = logging.FileHandler(log_dir / log_file)
-    file_handler.setLevel(logging.DEBUG)
+    file_handler.setLevel(CO_FILE_LOGLEVEL)
     file_handler.setFormatter(file_formatter)
     
     # Console handler
     console_handler = logging.StreamHandler()
-    console_handler.setLevel(logging.INFO)
+    console_handler.setLevel(CO_CONSOLE_LOGLEVEL)
     console_handler.setFormatter(console_formatter)
     
     # Add handlers to logger
@@ -117,7 +121,8 @@ def save_loss_data(
     
     # Generate filename
     if filename is None:
-        filename = f"{algorithm_name}_{loss_function_name}_{start_time}.csv"
+        int_start_time = int(start_time)
+        filename = f"{algorithm_name}_{loss_function_name}_{int_start_time}.csv"
     
     # Save to file
     file_path = results_dir / filename
