@@ -229,6 +229,7 @@ def blur_and_deblur_image(image_path: str,
     logger.info(f"  display: {display}")
     logger.info(f"  t: {t}")
     logger.info(f"  s: {s}")
+    logger.info(f"  rho: {rho}")
     logger.info(f"  gamma: {gamma}")
     logger.info(f"  salt_prob: {salt_prob}")
     logger.info(f"  pepper_prob: {pepper_prob}")
@@ -279,6 +280,7 @@ def blur_and_deblur_image(image_path: str,
                                   algorithm=algorithm,
                                   t=t,
                                   s=s,
+                                  rho=rho,
                                   gamma=gamma,
                                   niters=niters,
                                   display=display,
