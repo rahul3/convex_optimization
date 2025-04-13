@@ -1,4 +1,6 @@
 import torch
+import numpy as np
+from datetime import datetime
 from typing import Callable
 
 from deblur_denoise.admm.algorithm import admm_solver
@@ -15,6 +17,7 @@ from deblur_denoise.utils.logging_utils import logger, log_execution_time
 
 
 def blur_image(image_path: str,
+               kernel: torch.Tensor=None,
                blur_type: str="gaussian",
                noise_type: str="gaussian",
                image_shape: tuple=(100, 100),
@@ -26,7 +29,9 @@ def blur_image(image_path: str,
                mean: float=None,
                std: float=None,
                scale: float=None,
-               display: bool=False) -> torch.Tensor:
+               display: bool=False,
+               save_path: str=None,
+               img_id: str=None) -> torch.Tensor:
     """
     Blur an image based on the specified blur type and parameters.
     
@@ -43,10 +48,12 @@ def blur_image(image_path: str,
         raise ValueError(f"Error reading image: {e}")
 
     if blur_type == "gaussian":
-        kernel = gaussian_filter([blur_kernel_size, blur_kernel_size], blur_kernel_sigma)
+        if kernel is None:
+            kernel = gaussian_filter([blur_kernel_size, blur_kernel_size], blur_kernel_sigma)
         blurred_image = circular_convolve2d(image, kernel)
     elif blur_type == "motion":
-        kernel = create_motion_blur_kernel(blur_kernel_size, blur_kernel_angle)
+        if kernel is None:
+            kernel = create_motion_blur_kernel(blur_kernel_size, blur_kernel_angle)
         blurred_image = circular_convolve2d(image, kernel)
     elif blur_type == "none":
         blurred_image = image
@@ -67,7 +74,9 @@ def blur_image(image_path: str,
         raise NotImplementedError(f"Noise type {noise_type} not implemented")
     
     if display:
-        display_images(image, noisy_image, title1="Original Image", title2=f"Blur: {blur_type} - Noise: {noise_type}")
+        display_images(image,
+                       noisy_image,
+                       title1="Original Image", title2=f"Blur: {blur_type} - Noise: {noise_type}", save_path=save_path, img_id=img_id)
     
     return noisy_image.squeeze()
 
@@ -77,10 +86,15 @@ def deblur_image(noisy_image: torch.Tensor,
                  display: bool=False,
                  loss_function: Callable=ssim,
                  save_loss: bool=False,
+                 save_path: str=None,
+                 img_id: str=None,
                  **kwargs) -> torch.Tensor:
     """
     Deblur an image based on the specified algorithm.
     """
+    if img_id is None:
+        img_id = f'{algorithm}_{loss_function.__name__}'
+
     t = kwargs.get("t", 18)
     rho = kwargs.get("rho", 0.001)
     gamma = kwargs.get("gamma", 0.5)
@@ -100,7 +114,12 @@ def deblur_image(noisy_image: torch.Tensor,
         raise NotImplementedError(f"Algorithm {algorithm} not implemented")
     
     if display:
-        display_images(noisy_image, deblurred_image.squeeze(), title1="Noisy Image", title2=f"Deblurred Image - {algorithm}")
+        display_images(noisy_image,
+                       deblurred_image.squeeze(),
+                       title1="Noisy Image",
+                       title2=f"Deblurred Image - {algorithm}",
+                       save_path=save_path,
+                       img_id=img_id)
 
     return deblurred_image
 
@@ -108,6 +127,7 @@ def deblur_image(noisy_image: torch.Tensor,
 @log_execution_time(logger)
 def blur_and_deblur_image(image_path: str,
                           image_shape: tuple=(300, 300),
+                          experiment_id: str=None,
                           blur_type: str="gaussian",
                           noise_type: str="gaussian",
                           blur_kernel_size: int=5,
@@ -126,6 +146,8 @@ def blur_and_deblur_image(image_path: str,
                           scale: float=1.0,
                           max_iter: int=1000,
                           save_loss: bool=False,
+                          save_path: str=None,
+                          img_id: str=None,
                           loss_function: Callable=ssim) -> torch.Tensor:
     """
     Blur and deblur an image.
@@ -135,6 +157,8 @@ def blur_and_deblur_image(image_path: str,
         Path to the input image file
     image_shape: tuple 
         Desired shape to resize the image (width, height)
+    experiment_id: str 
+        Unique identifier for the experiment
     blur_type: str 
         Type of blur to apply ("gaussian" or "motion")
     noise_type: str 
@@ -166,9 +190,15 @@ def blur_and_deblur_image(image_path: str,
     std: float 
         Standard deviation of Gaussian noise
     scale: float 
-        Scale parameter for Poisson noise
+        Scale parameter for Poisson noise (not implemented yet)
     max_iter: int 
         Maximum number of iterations for optimization algorithms
+    save_loss: bool 
+        Whether to save the loss values
+    save_path: str 
+        Path to save the images and loss values
+    img_id: str 
+        Unique identifier for the image
     loss_function: Callable 
         Loss function to evaluate convergence (e.g., ssim, psnr, mse)
     
@@ -177,6 +207,11 @@ def blur_and_deblur_image(image_path: str,
     torch.Tensor
         The deblurred image
     """
+    if experiment_id is None:
+        experiment_id = f'{datetime.now().strftime("%Y%m%d_%H%M%S")}'
+    logger.info("*" * 100)
+    logger.info(f"  experiment_id: {experiment_id}")
+    logger.info("*" * 100)
 
     # Log all parameters
     logger.info("Running blur_and_deblur_image with parameters:")
@@ -200,11 +235,25 @@ def blur_and_deblur_image(image_path: str,
     logger.info(f"  scale: {scale}")
     logger.info(f"  max_iter: {max_iter}")
     logger.info(f"  loss_function: {loss_function.__name__ if hasattr(loss_function, '__name__') else str(loss_function)}")
+    logger.info(f"  save_loss: {save_loss}")
+    logger.info(f"  save_path: {save_path}")
+    logger.info(f"  img_id: {img_id}")
+    logger.info("*" * 100)
 
-    # Generate a kernel if not provided, using gaussian filter
+    if img_id is None:
+        img_id = f'{algorithm}_{loss_function.__name__}_{experiment_id}'
+
+    # Generate a kernel if not provided
     if kernel is None:
-        kernel = gaussian_filter([blur_kernel_size, blur_kernel_size], blur_kernel_sigma)
-        kernel = torch.from_numpy(kernel)
+        if blur_type == "gaussian":
+            kernel = gaussian_filter(size=[blur_kernel_size, blur_kernel_size], sigma=blur_kernel_sigma)
+        elif blur_type == "motion":
+            kernel = create_motion_blur_kernel(size=blur_kernel_size, angle=blur_kernel_angle)
+        else:
+            raise ValueError(f"Unsupported blur type: {blur_type}")
+        
+        if type(kernel) == np.ndarray:
+            kernel = torch.from_numpy(kernel)
 
 
     # Blur the image
@@ -232,7 +281,9 @@ def blur_and_deblur_image(image_path: str,
                                   max_iter=max_iter,
                                   display=display,
                                   loss_function=loss_function,
-                                  save_loss=save_loss)
+                                  save_loss=save_loss,
+                                  save_path=save_path,
+                                  img_id=img_id)
     
     return deblurred_image
 
@@ -273,16 +324,17 @@ if __name__ == "__main__":
     
     # Salt and pepper noise and deblur with chambolle_pock with ssim loss function
     blur_and_deblur_image(image_path="/Users/rahulpadmanabhan/Code/ws3/convex_optimization/deblur_denoise/utils/sample_images/dog.jpg",
-                          image_shape=(300, 300),
+                          image_shape=(100, 100),
                           blur_type="motion",
                           noise_type="salt_pepper",
-                          blur_kernel_size=5,
-                          blur_kernel_angle=45,
-                          salt_prob=0.15,
-                          pepper_prob=0.15,
+                          blur_kernel_size=3,
+                          blur_kernel_angle=30,
+                          salt_prob=0.05,
+                          pepper_prob=0.05,
                           algorithm="chambolle_pock",
                           loss_function=ssim,
                           save_loss=True,
+                          save_path="/Users/rahulpadmanabhan/Code/ws3/convex_optimization/deblur_denoise/results",
                           display=True)
     
     # Gaussian blur and deblur with admm with ssim loss function
@@ -295,3 +347,18 @@ if __name__ == "__main__":
     #                       algorithm="admm",
     #                       display=True,
     #                       loss_function=ssim)
+
+    # Motion blur and deblur with chambolle_pock with ssim loss function
+    # Running a grid search for the best parameters
+    # blur_and_deblur_image(image_path="/Users/rahulpadmanabhan/Code/ws3/convex_optimization/deblur_denoise/utils/sample_images/dog.jpg",
+    #                     image_shape=(100, 100),
+    #                     blur_type="motion",
+    #                     noise_type="salt_pepper",
+    #                     blur_kernel_size=3,
+    #                     blur_kernel_angle=30,
+    #                     salt_prob=0.05,
+    #                     pepper_prob=0.05,
+    #                     algorithm="chambolle_pock",
+    #                     loss_function=ssim,
+    #                     save_loss=True,
+    #                     display=True)
