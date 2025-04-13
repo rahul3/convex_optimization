@@ -93,7 +93,7 @@ def chambolle_pock(b: torch.Tensor,
                 loss_list.append(loss)
             if k % 50 == 0 or k == max_iter - 1:
                 iter_str = f"Iteration {k}" if k != max_iter else f"Final Iteration {k}"
-                logger.info(f"{iter_str} completed. {loss_fn_name} Loss: {loss}")
+                logger.info(f"{iter_str} completed. {loss_fn_name} : {loss}")
 
     x_sol = x_next
     logger.info(f"{x_sol.shape=}")
