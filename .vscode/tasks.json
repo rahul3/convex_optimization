@@ -6,7 +6,7 @@
             "type": "shell",
             "command": "${command:python.interpreterPath}",
             "args": [
-                "dev_script.py"
+                "build_test_script.py"
             ],
             "group": {
                 "kind": "build",
