@@ -1,9 +1,9 @@
-
 import os
 import numpy as np
 import matplotlib.pyplot as plt
 from typing import Union, Optional
 from pathlib import Path
+from datetime import datetime
 
 from PIL import Image
 import torch
@@ -12,6 +12,8 @@ import torchvision.transforms as transforms
 import torchvision.transforms.functional as TF
 from torchvision.transforms import ToTensor
 from torch.nn import functional as F
+
+from deblur_denoise.utils.logging_utils import logger
 
 # Increase PIL limit if working with large TIFF files
 Image.MAX_IMAGE_PIXELS = None  # Remove decompression bomb protection
@@ -57,7 +59,7 @@ def read_image(
 
 
 # Function to display tensor images
-def display_images(original, processed, title1="Original", title2="After Convolution"):
+def display_images(original, processed, title1="Original", title2="After Convolution", save_path=None, img_id=None):
     plt.figure(figsize=(12, 6))
     
     # Display original image
@@ -111,7 +113,33 @@ def display_images(original, processed, title1="Original", title2="After Convolu
     plt.title(title2)
     plt.axis('off')
     
-    plt.tight_layout()
+    plt.tight_layout(pad=2.0)  # Increase padding to avoid cutting off titles
+    if save_path is not None:
+        if img_id is None:
+            img_id = f"display_image_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+        
+        # Save combined image
+        plt.savefig(os.path.join(save_path, f"{img_id}.png"), bbox_inches='tight')
+        logger.info(f"Saved combined image to {os.path.join(save_path, f'{img_id}.png')}")
+        
+        # Save original image separately
+        plt.figure(figsize=(6, 6))
+        plt.imshow(img_np, cmap='gray')
+        plt.title(title1)
+        plt.axis('off')
+        plt.tight_layout()
+        plt.savefig(os.path.join(save_path, f"{img_id}_original.png"), bbox_inches='tight')
+        
+        # Save processed image separately
+        plt.figure(figsize=(6, 6))
+        plt.imshow(proc_np, cmap='gray')
+        plt.title(title2)
+        plt.axis('off')
+        plt.tight_layout()
+        plt.savefig(os.path.join(save_path, f"{img_id}_processed.png"), bbox_inches='tight')
+        
+        logger.info(f"Saved individual images to {os.path.join(save_path, f'{img_id}_original.png')} and {os.path.join(save_path, f'{img_id}_processed.png')}")
+
     plt.show()
 
 def display_complex_output(output):
@@ -152,10 +180,3 @@ def display_complex_output(output):
     
     plt.tight_layout()
     plt.show()
-
-if __name__ == "__main__":
-    # change this to the path of the image you want to read
-    IMG_PATH = "/Users/rahulpadmanabhan/Code/ws3/convex_optimization/convex_optimization/utils/other_images/grok_generated_image.jpg"
-    img = read_image(IMG_PATH)
-    print(img.shape)
-    display_images(img, img, "Original", "After Convolution") #TODO : implement convolution
