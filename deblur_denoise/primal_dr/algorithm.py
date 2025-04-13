@@ -177,9 +177,7 @@ def primal_dr_splitting(problem: str, kernel: torch.Tensor,
             'l1_loss': l1_loss_list,
             'l2_loss': l2_loss_list
         }
-        df = save_loss_data(loss_list, 'primal_dr_splitting', loss_fn_name, parameters, start_time)
-        timestamp = f'{int(start_time)}'
-        # df.to_csv(f'primal_dr_splitting_{loss_fn_name}_{timestamp}.csv', index=False)
+        save_loss_data(loss_list, 'primal_dr_splitting', loss_fn_name, parameters, start_time)
 
     solution = prox_box(z1, tprimaldr)
     if display:
