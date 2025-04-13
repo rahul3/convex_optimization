@@ -25,6 +25,7 @@ def admm_solver(b: torch.Tensor,
                 gamma: float=0.5, 
                 kernel: torch.Tensor=None,
                 niters: int=500,
+                tol: float=1e-4,
                 loss_function: Callable=psnr,
                 save_loss: bool=False,
                 **kwargs):
@@ -33,7 +34,7 @@ def admm_solver(b: torch.Tensor,
     """
     # Get current time in seconds for performance measurement
     start_time = int(time.time())
-
+    loss_fn_name = getattr(loss_function, '__name__', str(loss_function))
     logger.info(f"Starting ADMM solver with parameters: t={t}, rho={rho}, gamma={gamma}, niters={niters}")
     logger.info(f"Objective function: {objective_function}")
 
@@ -109,7 +110,6 @@ def admm_solver(b: torch.Tensor,
 
         # Checking if the solution is converging
         if i > 1:
-            logger.info(f"Iteration {i} completed")
             K_T_y = dd_ops.apply_KTrans(y_next[0]) # to get K^T y , we use the y[0]
             y_12 = torch.stack([y_next[1], y_next[2]], dim=0) # the part of y that interacts with D 
             y_12 = y_12.permute(1, 2, 0) # because of the way the apply_DTrans is implemented (convert from (2,100,100) to (100, 100, 2))
@@ -129,18 +129,21 @@ def admm_solver(b: torch.Tensor,
 
             # Calculate and display the difference between current solution and previous solution
             if i > 1:  # Skip the first check since we don't have a previous solution to compare
+                logger.debug(f"Iteration {i} completed")
                 diff = loss_function(sol, b)
                 if type(diff) == torch.Tensor:
                     diff = diff.item()
                 if save_loss:
                     loss_list.append(diff)
                 
-                logger.info(f"Relative difference at iteration {i}: {diff:.6f}")
+                logger.debug(f"Relative difference at iteration {i}: {diff:.6f}")
                 
-                tol = 1e-4
                 if diff < tol:  
                     logger.info(f"Converged at iteration {i} with relative difference {diff:.6f}")
                     break
+                if i % 50 == 0 or i == niters - 1:
+                    iter_str = f"Iteration {i}" if i != niters - 1 else f"Final Iteration {i}"
+                    logger.info(f"{iter_str} completed. {loss_fn_name} : {diff}")
             
     # building the final solution
     K_T_y = dd_ops.apply_KTrans(y_next[0]) # to get K^T y , we use the y[0]
@@ -168,9 +171,6 @@ def admm_solver(b: torch.Tensor,
             'niters': niters,
             'objective_function': objective_function
         }
-        
-        # Get loss function name
-        loss_fn_name = getattr(loss_function, '__name__', str(loss_function))
         
         # Save the data
         save_loss_data(

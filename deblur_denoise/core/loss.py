@@ -6,14 +6,14 @@ def l1_loss(x: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
     """
     Compute the L1 loss between two tensors.
     """
-    logger.info(f"L1 loss: {torch.norm(x - y, p=1)}")
+    logger.debug(f"L1 loss: {torch.norm(x - y, p=1)}")
     return torch.norm(x - y, p=1)
 
 def l2_loss(x: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
     """
     Compute the L2 loss between two tensors.
     """
-    logger.info(f"L2 loss: {torch.norm(x - y, p=2)}")
+    logger.debug(f"L2 loss: {torch.norm(x - y, p=2)}")
     return torch.norm(x - y, p=2)
 
 def psnr(x: torch.Tensor, y: torch.Tensor, max_val: float = 1.0) -> torch.Tensor:
@@ -30,9 +30,9 @@ def psnr(x: torch.Tensor, y: torch.Tensor, max_val: float = 1.0) -> torch.Tensor
     """
     mse = torch.mean((x - y) ** 2)
     if mse == 0:  
-        logger.info(f"PSNR: {float('inf')}")
+        logger.debug(f"PSNR: {float('inf')}")
         return torch.tensor(float('inf'))
-    logger.info(f"PSNR: {10 * torch.log10(max_val ** 2 / mse)}")
+    logger.debug(f"PSNR: {10 * torch.log10(max_val ** 2 / mse)}")
     return 10 * torch.log10(max_val ** 2 / mse)
 
 
@@ -106,13 +106,13 @@ def ssim(x: torch.Tensor, y: torch.Tensor, window_size: int = 11, max_val: float
     ssim_value = ssim_map.mean(dim=(2, 3))  # Shape [B, C]
     ssim_value = ssim_value.mean(dim=1)  # Shape [B], average over channels
     
-    logger.info(f"SSIM: {ssim_value.mean().item()}")
+    logger.debug(f"SSIM: {ssim_value.mean().item()}")
     return ssim_value
 
 def mse(x: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
     """
     Compute the MSE between two tensors.
     """
-    logger.info(f"MSE: {torch.mean((x - y) ** 2)}")
+    logger.debug(f"MSE: {torch.mean((x - y) ** 2)}")
     return torch.mean((x - y) ** 2)
 

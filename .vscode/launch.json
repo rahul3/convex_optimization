@@ -13,7 +13,7 @@
             "name": "Python: Reinstall and Test",
             "type": "python",
             "request": "launch",
-            "program": "dev_script.py",
+            "program": "build_test_script.py",
             "console": "integratedTerminal",
             "justMyCode": true
         }
