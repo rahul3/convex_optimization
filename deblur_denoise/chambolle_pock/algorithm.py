@@ -33,7 +33,9 @@ def chambolle_pock(b: torch.Tensor,
     Chambolle-Pock algorithm for deblurring and denoising
     """
     start_time = int(time.time())
+    loss_fn_name = getattr(loss_function, '__name__', str(loss_function))
     logger.info(f'Running Chambolle-Pock with values: t={t}, s={s}, gamma={gamma}')
+    logger.info(f"Loss function: {loss_fn_name}")
     dd_ops = DeblurDenoiseOperators(kernel, b.squeeze(), 1, 1)
 
     n_rows, n_cols = b.squeeze().shape
@@ -83,12 +85,15 @@ def chambolle_pock(b: torch.Tensor,
         z_prev = z_next.clone()
 
         if k > 1:
-            logger.info(f"Iteration {k} completed.")
+            logger.debug(f"Iteration {k} completed.")
             loss = loss_function(x_next, b)
             if type(loss) == torch.Tensor:
                 loss = loss.item()
             if save_loss:
                 loss_list.append(loss)
+            if k % 50 == 0 or k == max_iter - 1:
+                iter_str = f"Iteration {k}" if k != max_iter else f"Final Iteration {k}"
+                logger.info(f"{iter_str} completed. {loss_fn_name} Loss: {loss}")
 
     x_sol = x_next
     logger.info(f"{x_sol.shape=}")
@@ -104,8 +109,6 @@ def chambolle_pock(b: torch.Tensor,
             'objective_function': objective_function
         }
         
-        # Get loss function name
-        loss_fn_name = getattr(loss_function, '__name__', str(loss_function))
         
         # Save the data
         save_loss_data(
