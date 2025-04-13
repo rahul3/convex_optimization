@@ -109,7 +109,7 @@ def deblur_image(noisy_image: torch.Tensor,
     elif algorithm == "primal_dual_dr":
         deblurred_image = primal_dual_dr_splitting(noisy_image, loss_function=loss_function, save_loss=save_loss) # TODO: Add functionality
     elif algorithm == "primal_dr":
-        deblurred_image = primal_dr_splitting(problem="primal_dr", b=noisy_image, kernel=kernel, loss_function=loss_function, save_loss=save_loss) # TODO: Add functionality
+        deblurred_image = primal_dr_splitting(problem="primal_dr", b=noisy_image, kernel=kernel, t=t, gamma=gamma, rho=rho, niters=niters, loss_function=loss_function, save_loss=save_loss) # TODO: Add functionality
     else:
         raise NotImplementedError(f"Algorithm {algorithm} not implemented")
     
@@ -144,7 +144,7 @@ def blur_and_deblur_image(image_path: str,
                           mean: float=0.0,
                           std: float=0.1,
                           scale: float=1.0,
-                          max_iter: int=1000,
+                          niters: int=1000,
                           save_loss: bool=False,
                           save_path: str=None,
                           img_id: str=None,
@@ -233,7 +233,7 @@ def blur_and_deblur_image(image_path: str,
     logger.info(f"  mean: {mean}")
     logger.info(f"  std: {std}")
     logger.info(f"  scale: {scale}")
-    logger.info(f"  max_iter: {max_iter}")
+    logger.info(f"  niters: {niters}")
     logger.info(f"  loss_function: {loss_function.__name__ if hasattr(loss_function, '__name__') else str(loss_function)}")
     logger.info(f"  save_loss: {save_loss}")
     logger.info(f"  save_path: {save_path}")
@@ -278,17 +278,30 @@ def blur_and_deblur_image(image_path: str,
                                   t=t,
                                   s=s,
                                   gamma=gamma,
-                                  max_iter=max_iter,
+                                  niters=niters,
                                   display=display,
                                   loss_function=loss_function,
                                   save_loss=save_loss,
                                   save_path=save_path,
                                   img_id=img_id)
     
+    psnr_val = psnr(deblurred_image, read_image(image_path, shape=image_shape)) 
+    ssim_val = ssim(deblurred_image, read_image(image_path, shape=image_shape).squeeze()).item()
+    mse_val = mse(deblurred_image, read_image(image_path, shape=image_shape))
+    l1_loss_val = l1_loss(deblurred_image, read_image(image_path, shape=image_shape))
+    l2_loss_val = l2_loss(deblurred_image, read_image(image_path, shape=image_shape))
+    logger.info("*" * 100)
+    logger.info("*" * 20 + " " * 5 + "Loss metrics w.r.t. original image" + " " * 5 + "*" * 20)
+    logger.info(f"PSNR: {psnr_val}")
+    logger.info(f"SSIM: {ssim_val}")
+    logger.info(f"MSE: {mse_val}")
+    logger.info(f"L1 Loss: {l1_loss_val}")
+    logger.info(f"L2 Loss: {l2_loss_val}")
+    logger.info("*" * 100)
     return deblurred_image
 
 if __name__ == "__main__":
-    from deblur_denoise.core.loss import ssim
+    from deblur_denoise.core.loss import ssim, psnr
 
     # This is how the professor can call our code.
     # Example 1:
@@ -323,21 +336,21 @@ if __name__ == "__main__":
     #                       display=True)
     
     # Salt and pepper noise and deblur with chambolle_pock with ssim loss function
-    blur_and_deblur_image(image_path="/Users/rahulpadmanabhan/Code/ws3/convex_optimization/deblur_denoise/utils/sample_images/dog.jpg",
-                          image_shape=(100, 100),
-                          blur_type="motion",
-                          noise_type="salt_pepper",
-                          blur_kernel_size=3,
-                          blur_kernel_angle=30,
-                          salt_prob=0.05,
-                          pepper_prob=0.05,
-                          algorithm="chambolle_pock",
-                          loss_function=ssim,
-                          save_loss=True,
-                          save_path="/Users/rahulpadmanabhan/Code/ws3/convex_optimization/deblur_denoise/results",
-                          display=True)
+    # blur_and_deblur_image(image_path="/Users/rahulpadmanabhan/Code/ws3/convex_optimization/deblur_denoise/utils/sample_images/dog.jpg",
+    #                       image_shape=(100, 100),
+    #                       blur_type="motion",
+    #                       noise_type="salt_pepper",
+    #                       blur_kernel_size=3,
+    #                       blur_kernel_angle=30,
+    #                       salt_prob=0.05,
+    #                       pepper_prob=0.05,
+    #                       algorithm="chambolle_pock",
+    #                       loss_function=ssim,
+    #                       save_loss=True,
+    #                       save_path="/Users/rahulpadmanabhan/Code/ws3/convex_optimization/deblur_denoise/results",
+    #                       display=True)
     
-    # Gaussian blur and deblur with admm with ssim loss function
+    # # Gaussian blur and deblur with admm with ssim loss function
     # blur_and_deblur_image(image_path="/Users/rahulpadmanabhan/Code/ws3/convex_optimization/deblur_denoise/utils/sample_images/dog.jpg",
     #                       image_shape=(300, 300),
     #                       blur_type="gaussian",
@@ -346,6 +359,8 @@ if __name__ == "__main__":
     #                       blur_kernel_sigma=0.8,
     #                       algorithm="admm",
     #                       display=True,
+    #                       save_loss=True,
+    #                       save_path="/Users/rahulpadmanabhan/Code/ws3/convex_optimization/deblur_denoise/results",
     #                       loss_function=ssim)
 
     # Motion blur and deblur with chambolle_pock with ssim loss function
@@ -362,3 +377,48 @@ if __name__ == "__main__":
     #                     loss_function=ssim,
     #                     save_loss=True,
     #                     display=True)
+
+    # blur_and_deblur_image(image_path="/Users/rahulpadmanabhan/Code/ws3/convex_optimization/deblur_denoise/utils/sample_images/dog.jpg",
+    #                     image_shape=(300, 300),
+    #                     t=15,
+    #                     gamma=0.3,
+    #                     blur_type="gaussian",
+    #                     noise_type="gaussian",
+    #                     blur_kernel_size=5,
+    #                     blur_kernel_sigma=0.8,
+    #                     algorithm="admm",
+    #                     display=True,
+    #                     save_loss=True,
+    #                     save_path="/Users/rahulpadmanabhan/Code/ws3/convex_optimization/deblur_denoise/results",
+    #                     loss_function=psnr)
+
+    # blur_and_deblur_image(image_path="/Users/rahulpadmanabhan/Code/ws3/convex_optimization/deblur_denoise/utils/sample_images/dog.jpg",
+    #                 image_shape=(300, 300),
+    #                 t=15,
+    #                 gamma=0.3,
+    #                 niters=500,
+    #                 blur_type="gaussian",
+    #                 noise_type="gaussian",
+    #                 blur_kernel_size=5,
+    #                 blur_kernel_sigma=0.8,
+    #                 algorithm="primal_dr",
+    #                 display=True,
+    #                 save_loss=True,
+    #                 save_path="/Users/rahulpadmanabhan/Code/ws3/convex_optimization/deblur_denoise/results",
+    #                 loss_function=ssim)
+    
+
+    blur_and_deblur_image(image_path="/Users/rahulpadmanabhan/Code/ws3/convex_optimization/deblur_denoise/utils/sample_images/dog.jpg",
+                    image_shape=(300, 300),
+                    t=15,
+                    gamma=0.3,
+                    niters=500,
+                    blur_type="gaussian",
+                    noise_type="gaussian",
+                    blur_kernel_size=5,
+                    blur_kernel_sigma=0.8,
+                    algorithm="primal_dr",
+                    display=True,
+                    save_loss=True,
+                    save_path="/Users/rahulpadmanabhan/Code/ws3/convex_optimization/deblur_denoise/results",
+                    loss_function=psnr)
