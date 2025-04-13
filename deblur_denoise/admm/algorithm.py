@@ -15,7 +15,6 @@ from ..utils.logging_utils import logger, log_execution_time, save_loss_data
 from ..op_math.python_code.multiplying_matrix import DeblurDenoiseOperators
 from ..core.loss import psnr, l1_loss, l2_loss, mse, ssim
 
-loss_list = []
 
 @log_execution_time(logger)
 def admm_solver(b: torch.Tensor,
@@ -33,7 +32,14 @@ def admm_solver(b: torch.Tensor,
     ADMM (Alternating Direction Method of Multipliers) Algorithm
     """
     # Get current time in seconds for performance measurement
-    start_time = int(time.time())
+    start_time = time.time()
+    loss_list = []
+    psnr_list = []
+    ssim_list = []
+    mse_list = []
+    l1_loss_list = []
+    l2_loss_list = []
+
     loss_fn_name = getattr(loss_function, '__name__', str(loss_function))
     logger.info(f"Starting ADMM solver with parameters: t={t}, rho={rho}, gamma={gamma}, niters={niters}")
     logger.info(f"Objective function: {objective_function}")
@@ -135,7 +141,12 @@ def admm_solver(b: torch.Tensor,
                     diff = diff.item()
                 if save_loss:
                     loss_list.append(diff)
-                
+                    psnr_list.append(psnr(sol, b).item() if type(psnr(sol, b)) == torch.Tensor else psnr(sol, b))
+                    ssim_list.append(ssim(sol, b).item() if type(ssim(sol, b)) == torch.Tensor else ssim(sol, b))
+                    mse_list.append(mse(sol, b).item() if type(mse(sol, b)) == torch.Tensor else mse(sol, b))
+                    l1_loss_list.append(l1_loss(sol, b).item() if type(l1_loss(sol, b)) == torch.Tensor else l1_loss(sol, b))
+                    l2_loss_list.append(l2_loss(sol, b).item() if type(l2_loss(sol, b)) == torch.Tensor else l2_loss(sol, b))
+                    
                 logger.debug(f"Relative difference at iteration {i}: {diff:.6f}")
                 
                 if diff < tol:  
@@ -169,7 +180,13 @@ def admm_solver(b: torch.Tensor,
             'rho': rho,
             'gamma': gamma,
             'niters': niters,
-            'objective_function': objective_function
+            'objective_function': objective_function,
+            'loss_function': loss_fn_name,
+            'psnr': psnr_list,
+            'ssim': ssim_list,
+            'mse': mse_list,
+            'l1_loss': l1_loss_list,
+            'l2_loss': l2_loss_list
         }
         
         # Save the data

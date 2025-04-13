@@ -4,6 +4,7 @@ Implementation of Primal Douglas-Rachford Splitting Algorithm
 
 import torch
 import numpy as np
+import time
 from scipy import ndimage
 from typing import Callable
 
@@ -12,21 +13,31 @@ from ..core.blur import create_motion_blur_kernel, gaussian_filter
 from ..core.proximal_operators import prox_l1, prox_box, prox_iso, prox_l2_squared
 from ..utils.conv_utils import read_image, display_images, display_complex_output
 from ..op_math.python_code.multiplying_matrix import DeblurDenoiseOperators
-from ..utils.logging_utils import log_execution_time, logger
+from ..utils.logging_utils import log_execution_time, logger, save_loss_data
 from ..core.loss import psnr, l1_loss, l2_loss, mse, ssim
 
+
 @log_execution_time(logger)
-def primal_dr_splitting(problem: str, kernel: torch.Tensor, b: torch.Tensor,
-                        image_path: str = None, shape: tuple = (100, 100),
-                        loss_function: Callable=l2_loss,
-                        i: dict = {
-                            'maxiter': 500, 
-                            'gammal1': 0.049,
-                            'gammal2': 0.049,
-                            'tprimaldr': 2.0,
-                            'rhoprimaldr': 0.1,
-                            'tol': 10**-6
-                          },
+def primal_dr_splitting(problem: str, kernel: torch.Tensor, 
+                        b: torch.Tensor,
+                        image_path: str = None, 
+                        shape: tuple = (100, 100),
+                        loss_function: Callable=ssim,
+                        # old code below
+                        # i: dict = {
+                        #     'maxiter': 500, 
+                        #     'gammal1': 0.049,
+                        #     'gammal2': 0.049,
+                        #     'tprimaldr': 2.0,
+                        #     'rhoprimaldr': 0.1,
+                        #     'tol': 10**-6
+                        #   },
+                        niters: int=500,
+                        gamma: float=0.049,
+                        t: float=2.0,
+                        rho: float=0.1,
+                        tol: float=10**-6,
+                        display: bool=False,
                         save_loss: bool=False,
                         **kwargs) -> torch.Tensor:
     """
@@ -48,30 +59,55 @@ def primal_dr_splitting(problem: str, kernel: torch.Tensor, b: torch.Tensor,
 
     Returns the resulting deblurred image as a tensor.
     """
+    start_time = time.time()
+    loss_list = []
+    psnr_list = []
+    ssim_list = []
+    mse_list = []
+    l1_loss_list = []
+    l2_loss_list = []
+
+    # initialize all paramters to match old ones
+    tprimaldr = t
+    gammal1 = gamma
+    gammal2 = gamma
+    rhoprimaldr = rho
+    maxiter = niters
+    loss_fn_name = getattr(loss_function, '__name__', str(loss_function))
+
+    logger.info(f"Running Primal Douglas-Rachford Splitting with parameters:")
+    logger.info(f"  t: {t}")
+    logger.info(f"  gamma: {gamma}")
+    logger.info(f"  rho: {rho}")
+    logger.info(f"  tol: {tol}")
+    logger.info(f"  niters: {niters}")
+    logger.info(f"  save_loss: {save_loss}")
+    logger.info("*" * 100)
+
     # Initialize z1 and z2
     z1 = b
     z2 = torch.stack((b, b, b))
     z1prev = z1.detach().clone()
-    op = DeblurDenoiseOperators(kernel, b, i.get('tprimaldr'))
+    op = DeblurDenoiseOperators(kernel, b, tprimaldr)
 
     exited_via_break = False
-    for j in range(i.get('maxiter')):
+    for j in range(niters):
         # Update x
-        x = prox_box(z1, i.get('tprimaldr'))
+        x = prox_box(z1, tprimaldr)
         
         # Update y
         iso = None
         norm = None
         if problem == 'l1':
             # iso norm on y2, y3 parts
-            iso = prox_iso(z2[[1,2],:,:], i.get('tprimaldr') * i.get('gammal1'))
+            iso = prox_iso(z2[[1,2],:,:], tprimaldr * gammal1)
             # l1 norm on y1-b part
-            norm = b + prox_l1(z2[0,:,:] - b, i.get('tprimaldr'))
+            norm = b + prox_l1(z2[0,:,:] - b, tprimaldr)
         else:
             # iso norm on y2, y3 parts
-            iso = prox_iso(z2[[1,2],:,:], i.get('tprimaldr') * i.get('gammal2'))
+            iso = prox_iso(z2[[1,2],:,:], tprimaldr * gammal2)
             # l2 norm squared on y1-b part
-            norm = b + prox_l2_squared(z2[0,:,:] - b, i.get('tprimaldr'))
+            norm = b + prox_l2_squared(z2[0,:,:] - b, tprimaldr)
         y = torch.stack((norm, iso[0,:,:], iso[1,:,:]))
 
         # Update u
@@ -89,8 +125,8 @@ def primal_dr_splitting(problem: str, kernel: torch.Tensor, b: torch.Tensor,
 
         # Update z1 and z2
         z1prev = z1.detach().clone()
-        z1 = z1 + i.get('rhoprimaldr') * (u - x)
-        z2 = z2 + i.get('rhoprimaldr') * (v - y)
+        z1 = z1 + rhoprimaldr * (u - x)
+        z2 = z2 + rhoprimaldr * (v - y)
         # real part only (imaginary part should be 0)
         #z1 = z1.real
         #z2 = z2.real
@@ -99,21 +135,56 @@ def primal_dr_splitting(problem: str, kernel: torch.Tensor, b: torch.Tensor,
             logger.info(loss_function(z1, b))
 
         if j % 50 == 0:
-            logger.info(f"Iteration {j} completed.")
-            loss_function(z1, b)
+            loss_val = loss_function(z1, b)
+            if type(loss_val) == torch.Tensor:
+                loss_val = loss_val.item()
+            logger.info(f"Iteration {j} completed. {loss_fn_name} loss : {loss_val}")
         
-        loss_val = loss_function(z1, z1prev)
-        if type(loss_val) == torch.Tensor:
-            loss_val = loss_val.item()
-        if loss_val < i.get('tol'):
-            exited_via_break = True
-            break
+        if j > 1:
+            loss_val = loss_function(z1, z1prev)
+            psnr_val = psnr(z1, b)
+            ssim_val = ssim(z1, b)
+            mse_val = mse(z1, b)
+            l1_loss_val = l1_loss(z1, b)
+            l2_loss_val = l2_loss(z1, b)
+            if type(loss_val) == torch.Tensor:
+                loss_val = loss_val.item()
+            if save_loss:
+                loss_list.append(loss_val)
+                psnr_list.append(psnr_val.item() if type(psnr_val) == torch.Tensor else psnr_val)
+                ssim_list.append(ssim_val.item() if type(ssim_val) == torch.Tensor else ssim_val)
+                mse_list.append(mse_val.item() if type(mse_val) == torch.Tensor else mse_val)
+                l1_loss_list.append(l1_loss_val.item() if type(l1_loss_val) == torch.Tensor else l1_loss_val)
+                l2_loss_list.append(l2_loss_val.item() if type(l2_loss_val) == torch.Tensor else l2_loss_val)
+            if loss_val < tol:
+                exited_via_break = True
+                break
     
     if not exited_via_break:
-        logger.info(f"Warning: maxiter reached ({i.get('maxiter')}), primal_dr did not converge")
+        logger.info(f"Warning: maxiter reached ({niters}), primal_dr did not converge")
         logger.info(loss_function(z1, z1prev))
+
+    if save_loss and loss_list:
+        parameters = {
+            't': t,
+            'gamma': gamma,
+            'rho': rho,
+            'niters': niters,
+            'tol': tol,
+            'psnr': psnr_list,
+            'ssim': ssim_list,
+            'mse': mse_list,
+            'l1_loss': l1_loss_list,
+            'l2_loss': l2_loss_list
+        }
+        save_loss_data(loss_list, 'primal_dr_splitting', loss_fn_name, parameters, start_time)
+
+    solution = prox_box(z1, tprimaldr)
+    if display:
+        display_images(solution, b)
     
-    return prox_box(z1, i.get('tprimaldr'))
+    
+    return prox_box(z1, tprimaldr)
 
 
 def _l2_norm(x: torch.Tensor, y: torch.Tensor) -> float:
@@ -145,14 +216,15 @@ def primal_dr_splitting_test(image_path: str,
 
     res = primal_dr_splitting('l2', create_motion_blur_kernel(), 
                             motion_blurred.squeeze(),
-                            {
-                                'maxiter': 500, 
-                                'gammal1': 0.049,
-                                'gammal2': 0.049,
-                                'tprimaldr': 1.5,
-                                'rhoprimaldr': 0.05,
-                                'tol': 10**-6
-                            })
+                            t=1.5,
+                            gamma=0.049,
+                            rho=0.05,
+                            niters=500,
+                            save_loss=True,
+                            save_path='./results',
+                            img_id='primal_dr_splitting_test',
+                            loss_function=ssim,
+                            tol=10**-6)
 
     plt.subplot(1,3,1)
     plt.imshow(image.squeeze().numpy(), cmap='gray')

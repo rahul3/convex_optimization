@@ -10,13 +10,12 @@ from typing import Callable, List
 from pathlib import Path
 from ..core.convolution import circular_convolve2d
 from ..core.blur import create_motion_blur_kernel, gaussian_filter
-from ..core.loss import mse, psnr
+from ..core.loss import mse, psnr, ssim, l1_loss, l2_loss
 from ..core.proximal_operators import prox_l1, prox_l2_squared, prox_box, prox_iso
 from ..utils.conv_utils import read_image, display_images
 from ..op_math.python_code.multiplying_matrix import DeblurDenoiseOperators
 from ..utils.logging_utils import log_execution_time, logger, save_loss_data
 
-loss_list = []
 
 @log_execution_time(logger)
 def chambolle_pock(b: torch.Tensor,
@@ -32,7 +31,15 @@ def chambolle_pock(b: torch.Tensor,
     """
     Chambolle-Pock algorithm for deblurring and denoising
     """
-    start_time = int(time.time())
+    start_time = time.time()
+    loss_list = []
+    psnr_list = []
+    ssim_list = []
+    mse_list = []
+    l1_loss_list = []
+    l2_loss_list = []
+
+
     loss_fn_name = getattr(loss_function, '__name__', str(loss_function))
     logger.info(f'Running Chambolle-Pock with values: t={t}, s={s}, gamma={gamma}')
     logger.info(f"Loss function: {loss_fn_name}")
@@ -87,10 +94,18 @@ def chambolle_pock(b: torch.Tensor,
         if k > 1:
             logger.debug(f"Iteration {k} completed.")
             loss = loss_function(x_next, b)
+            
             if type(loss) == torch.Tensor:
                 loss = loss.item()
+            
             if save_loss:
                 loss_list.append(loss)
+                psnr_list.append(psnr(x_next, b).item() if type(psnr(x_next, b)) == torch.Tensor else psnr(x_next, b))
+                ssim_list.append(ssim(x_next, b).item() if type(ssim(x_next, b)) == torch.Tensor else ssim(x_next, b))
+                mse_list.append(mse(x_next, b).item() if type(mse(x_next, b)) == torch.Tensor else mse(x_next, b))
+                l1_loss_list.append(l1_loss(x_next, b).item() if type(l1_loss(x_next, b)) == torch.Tensor else l1_loss(x_next, b))
+                l2_loss_list.append(l2_loss(x_next, b).item() if type(l2_loss(x_next, b)) == torch.Tensor else l2_loss(x_next, b))
+            
             if k % 50 == 0 or k == max_iter - 1:
                 iter_str = f"Iteration {k}" if k != max_iter else f"Final Iteration {k}"
                 logger.info(f"{iter_str} completed. {loss_fn_name} : {loss}")
@@ -103,10 +118,16 @@ def chambolle_pock(b: torch.Tensor,
         # Create parameter dictionary
         parameters = {
             't': t,
-            's': s,
             'gamma': gamma,
-            'max_iter': max_iter,
-            'objective_function': objective_function
+            's': s,
+            'niters': max_iter,
+            'objective_function': objective_function,
+            'loss_function': loss_fn_name,
+            'psnr': psnr_list,
+            'ssim': ssim_list,
+            'mse': mse_list,
+            'l1_loss': l1_loss_list,
+            'l2_loss': l2_loss_list
         }
         
         
@@ -151,4 +172,4 @@ def chambolle_pock_test(image_path: str,
     x_sol = chambolle_pock(b, kernel, save_loss=save_loss, **kwargs)
 
     # display
-    display_images(b, x_sol, title1=f"Blurred Image - {blur_type}", title2="Deblurred Image")
+    display_images(b, x_sol, title1=f"Blurred Image - {blur_type}", title2="Deblurred Image - Chambolle Pock")
