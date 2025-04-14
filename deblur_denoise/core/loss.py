@@ -49,10 +49,6 @@ def ssim(x: torch.Tensor, y: torch.Tensor, window_size: int = 11, max_val: float
     Returns:
         SSIM value as a tensor (shape [B] for per-image SSIM, averaged over channels and spatial dimensions).
     """
-    # Validate shapes
-    if x.shape != y.shape:
-        raise ValueError(f"Input tensors must have the same shape, got {x.shape} and {y.shape}")
-
     # Ensure inputs are 4D tensors with shape [B, C, H, W]
     if x.dim() < 4:
         if x.dim() == 2:  # [H, W]
@@ -65,6 +61,10 @@ def ssim(x: torch.Tensor, y: torch.Tensor, window_size: int = 11, max_val: float
             y = y.unsqueeze(0).unsqueeze(0)  # [1, 1, H, W]
         elif y.dim() == 3:  # [C, H, W]
             y = y.unsqueeze(0)  # [1, C, H, W]
+
+    # Validate shapes
+    if x.shape != y.shape:
+        raise ValueError(f"Input tensors must have the same shape, got {x.shape} and {y.shape}")
     
     # Constants to stabilize division
     C1 = (0.01 * max_val) ** 2
