@@ -322,9 +322,9 @@ if __name__ == "__main__":
     from deblur_denoise.core.loss import ssim, psnr
 
     # This is how the professor can call our code.
-    # Example 1:
 
-    # Gaussian blur and deblur with admm with PSNR loss function (default)
+    # Example 1:
+    # Gaussian blur and gaussian noise with admm with PSNR loss function (default)
     blur_and_deblur_image(image_path="/Users/rahulpadmanabhan/Code/ws3/convex_optimization/deblur_denoise/utils/sample_images/dog.jpg",
                           image_shape=(300, 300),
                           blur_type="gaussian",
@@ -336,7 +336,7 @@ if __name__ == "__main__":
                           display=True,
                           save_loss=True,
                           save_path="/Users/rahulpadmanabhan/Code/ws3/convex_optimization/deblur_denoise/results")
-
+    # Example 2:
     # Motion blur and deblur with primal_dr with PSNR loss function (default)
     # blur_and_deblur_image(image_path="/Users/rahulpadmanabhan/Code/ws3/convex_optimization/deblur_denoise/utils/sample_images/dog.jpg",
     #                       image_shape=(300, 300),
@@ -350,6 +350,7 @@ if __name__ == "__main__":
     #                       save_path="/Users/rahulpadmanabhan/Code/ws3/convex_optimization/deblur_denoise/results",
     #                       display=True)
     
+    # Example 3:
     # Salt and pepper noise and deblur with chambolle_pock (which is the default algorithm) with PSNR loss function (default)
     # blur_and_deblur_image(image_path="/Users/rahulpadmanabhan/Code/ws3/convex_optimization/deblur_denoise/utils/sample_images/dog.jpg",
     #                       image_shape=(300, 300),
@@ -362,6 +363,7 @@ if __name__ == "__main__":
     #                       save_path="/Users/rahulpadmanabhan/Code/ws3/convex_optimization/deblur_denoise/results",
     #                       display=True)
     
+    # Example 4:
     # Salt and pepper noise and deblur with chambolle_pock with ssim loss function
     # blur_and_deblur_image(image_path="/Users/rahulpadmanabhan/Code/ws3/convex_optimization/deblur_denoise/utils/sample_images/dog.jpg",
     #                       image_shape=(100, 100),
@@ -378,7 +380,8 @@ if __name__ == "__main__":
     #                       save_path="/Users/rahulpadmanabhan/Code/ws3/convex_optimization/deblur_denoise/results",
     #                       display=True)
     
-    # # Gaussian blur and deblur with admm with ssim loss function
+    # Example 5:
+    # Gaussian blur and deblur with admm with ssim loss function
     # blur_and_deblur_image(image_path="/Users/rahulpadmanabhan/Code/ws3/convex_optimization/deblur_denoise/utils/sample_images/dog.jpg",
     #                       image_shape=(300, 300),
     #                       blur_type="gaussian",
@@ -391,6 +394,7 @@ if __name__ == "__main__":
     #                       save_path="/Users/rahulpadmanabhan/Code/ws3/convex_optimization/deblur_denoise/results",
     #                       loss_function=ssim)
 
+    # Example 6:
     # Motion blur and deblur with chambolle_pock with ssim loss function
     # Running a grid search for the best parameters
     # blur_and_deblur_image(image_path="/Users/rahulpadmanabhan/Code/ws3/convex_optimization/deblur_denoise/utils/sample_images/dog.jpg",
@@ -407,6 +411,8 @@ if __name__ == "__main__":
     #                     save_path="/Users/rahulpadmanabhan/Code/ws3/convex_optimization/deblur_denoise/results",
     #                     display=True)
 
+    # Example 7:
+    # Gaussian blur and deblur with admm with psnr loss function
     # blur_and_deblur_image(image_path="/Users/rahulpadmanabhan/Code/ws3/convex_optimization/deblur_denoise/utils/sample_images/dog.jpg",
     #                     image_shape=(300, 300),
     #                     t=15,
@@ -421,6 +427,8 @@ if __name__ == "__main__":
     #                     save_path="/Users/rahulpadmanabhan/Code/ws3/convex_optimization/deblur_denoise/results",
     #                     loss_function=psnr)
 
+    # Example 8:
+    # Gaussian blur and deblur with primal_dr with psnr loss function
     # blur_and_deblur_image(image_path="/Users/rahulpadmanabhan/Code/ws3/convex_optimization/deblur_denoise/utils/sample_images/dog.jpg",
     #                 image_shape=(300, 300),
     #                 t=15,
@@ -436,7 +444,7 @@ if __name__ == "__main__":
     #                 save_path="/Users/rahulpadmanabhan/Code/ws3/convex_optimization/deblur_denoise/results",
     #                 loss_function=ssim)
     
-
+    # Example 9:
     # blur_and_deblur_image(image_path="/Users/rahulpadmanabhan/Code/ws3/convex_optimization/deblur_denoise/utils/sample_images/dog.jpg",
     #                 image_shape=(300, 300),
     #                 t=15,
@@ -452,7 +460,7 @@ if __name__ == "__main__":
     #                 save_path="/Users/rahulpadmanabhan/Code/ws3/convex_optimization/deblur_denoise/results",
     #                 loss_function=psnr)
     
-
+    
     # blur_and_deblur_image(image_path="/Users/rahulpadmanabhan/Code/ws3/convex_optimization/deblur_denoise/utils/sample_images/dog.jpg",
     #             image_shape=(300, 300),
     #             t=1.4,
