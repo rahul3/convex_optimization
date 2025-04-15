@@ -180,9 +180,11 @@ def blur_and_deblur_image(image_path: str,
     t: float 
         Step size parameter used in optimization algorithms
     s: float 
-        Step size parameter used in optimization algorithms
+        Step size parameter used in Chambolle-Pock algorithm
+    rho: float 
+        Regularization parameter used in ADMM and DR algorithms
     gamma: float 
-        Regularization parameter used in optimization algorithms
+        Regularization parameter for TV norm
     salt_prob: float 
         Probability of salt noise (white pixels) for salt_pepper noise
     pepper_prob: float 
@@ -192,11 +194,11 @@ def blur_and_deblur_image(image_path: str,
     std: float 
         Standard deviation of Gaussian noise
     scale: float 
-        Scale parameter for Poisson noise (not implemented yet)
-    max_iter: int 
+        Scale parameter for Poisson and speckle noise
+    niters: int 
         Maximum number of iterations for optimization algorithms
     save_loss: bool 
-        Whether to save the loss values
+        Whether to save the loss values during optimization
     save_path: str 
         Path to save the images and loss values
     img_id: str 
