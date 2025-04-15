@@ -180,9 +180,11 @@ def blur_and_deblur_image(image_path: str,
     t: float 
         Step size parameter used in optimization algorithms
     s: float 
-        Step size parameter used in optimization algorithms
+        Step size parameter used in Chambolle-Pock algorithm
+    rho: float 
+        Regularization parameter used in ADMM and DR algorithms
     gamma: float 
-        Regularization parameter used in optimization algorithms
+        Regularization parameter for TV norm
     salt_prob: float 
         Probability of salt noise (white pixels) for salt_pepper noise
     pepper_prob: float 
@@ -192,11 +194,11 @@ def blur_and_deblur_image(image_path: str,
     std: float 
         Standard deviation of Gaussian noise
     scale: float 
-        Scale parameter for Poisson noise (not implemented yet)
-    max_iter: int 
+        Scale parameter for Poisson and speckle noise
+    niters: int 
         Maximum number of iterations for optimization algorithms
     save_loss: bool 
-        Whether to save the loss values
+        Whether to save the loss values during optimization
     save_path: str 
         Path to save the images and loss values
     img_id: str 
@@ -320,22 +322,22 @@ if __name__ == "__main__":
     from deblur_denoise.core.loss import ssim, psnr
 
     # This is how the professor can call our code.
-    # Example 1:
 
-    # Gaussian blur and deblur with admm with PSNR loss function (default)
+    # Example 1:
+    # Gaussian blur and gaussian noise with admm with ssim loss function (default)
     blur_and_deblur_image(image_path="/Users/rahulpadmanabhan/Code/ws3/convex_optimization/deblur_denoise/utils/sample_images/dog.jpg",
                           image_shape=(300, 300),
                           blur_type="gaussian",
                           noise_type="gaussian",
                           blur_kernel_size=5,
                           blur_kernel_sigma=0.8,
-                          niters=100,
+                          niters=500,
                           algorithm="admm",
                           display=True,
                           save_loss=True,
                           save_path="/Users/rahulpadmanabhan/Code/ws3/convex_optimization/deblur_denoise/results")
-
-    # Motion blur and deblur with primal_dr with PSNR loss function (default)
+    # Example 2:
+    # Motion blue with gaussian noise and chambolle_pock with ssim loss function (default   )
     # blur_and_deblur_image(image_path="/Users/rahulpadmanabhan/Code/ws3/convex_optimization/deblur_denoise/utils/sample_images/dog.jpg",
     #                       image_shape=(300, 300),
     #                       blur_type="motion",
@@ -348,6 +350,7 @@ if __name__ == "__main__":
     #                       save_path="/Users/rahulpadmanabhan/Code/ws3/convex_optimization/deblur_denoise/results",
     #                       display=True)
     
+    # Example 3:
     # Salt and pepper noise and deblur with chambolle_pock (which is the default algorithm) with PSNR loss function (default)
     # blur_and_deblur_image(image_path="/Users/rahulpadmanabhan/Code/ws3/convex_optimization/deblur_denoise/utils/sample_images/dog.jpg",
     #                       image_shape=(300, 300),
@@ -360,7 +363,8 @@ if __name__ == "__main__":
     #                       save_path="/Users/rahulpadmanabhan/Code/ws3/convex_optimization/deblur_denoise/results",
     #                       display=True)
     
-    # Salt and pepper noise and deblur with chambolle_pock with ssim loss function
+    # Example 4:
+    # Motion blur and salt and pepper noise with chambolle_pock with ssim loss function
     # blur_and_deblur_image(image_path="/Users/rahulpadmanabhan/Code/ws3/convex_optimization/deblur_denoise/utils/sample_images/dog.jpg",
     #                       image_shape=(100, 100),
     #                       blur_type="motion",
@@ -376,7 +380,8 @@ if __name__ == "__main__":
     #                       save_path="/Users/rahulpadmanabhan/Code/ws3/convex_optimization/deblur_denoise/results",
     #                       display=True)
     
-    # # Gaussian blur and deblur with admm with ssim loss function
+    # Example 5:
+    # Gaussian blur and gaussian noise with admm with ssim loss function
     # blur_and_deblur_image(image_path="/Users/rahulpadmanabhan/Code/ws3/convex_optimization/deblur_denoise/utils/sample_images/dog.jpg",
     #                       image_shape=(300, 300),
     #                       blur_type="gaussian",
@@ -389,7 +394,8 @@ if __name__ == "__main__":
     #                       save_path="/Users/rahulpadmanabhan/Code/ws3/convex_optimization/deblur_denoise/results",
     #                       loss_function=ssim)
 
-    # Motion blur and deblur with chambolle_pock with ssim loss function
+    # Example 6:
+    # Motion blur and salt and pepper noise with chambolle_pock with ssim loss function
     # Running a grid search for the best parameters
     # blur_and_deblur_image(image_path="/Users/rahulpadmanabhan/Code/ws3/convex_optimization/deblur_denoise/utils/sample_images/dog.jpg",
     #                     image_shape=(100, 100),
@@ -405,6 +411,8 @@ if __name__ == "__main__":
     #                     save_path="/Users/rahulpadmanabhan/Code/ws3/convex_optimization/deblur_denoise/results",
     #                     display=True)
 
+    # Example 7:
+    # Gaussian blur and gaussian noise with admm with psnr loss function
     # blur_and_deblur_image(image_path="/Users/rahulpadmanabhan/Code/ws3/convex_optimization/deblur_denoise/utils/sample_images/dog.jpg",
     #                     image_shape=(300, 300),
     #                     t=15,
@@ -419,22 +427,8 @@ if __name__ == "__main__":
     #                     save_path="/Users/rahulpadmanabhan/Code/ws3/convex_optimization/deblur_denoise/results",
     #                     loss_function=psnr)
 
-    # blur_and_deblur_image(image_path="/Users/rahulpadmanabhan/Code/ws3/convex_optimization/deblur_denoise/utils/sample_images/dog.jpg",
-    #                 image_shape=(300, 300),
-    #                 t=15,
-    #                 gamma=0.3,
-    #                 niters=500,
-    #                 blur_type="gaussian",
-    #                 noise_type="gaussian",
-    #                 blur_kernel_size=5,
-    #                 blur_kernel_sigma=0.8,
-    #                 algorithm="primal_dr",
-    #                 display=True,
-    #                 save_loss=True,
-    #                 save_path="/Users/rahulpadmanabhan/Code/ws3/convex_optimization/deblur_denoise/results",
-    #                 loss_function=ssim)
-    
-
+    # Example 8:
+    # Gaussian blur and gaussian noise with primal_dr with psnr loss function
     # blur_and_deblur_image(image_path="/Users/rahulpadmanabhan/Code/ws3/convex_optimization/deblur_denoise/utils/sample_images/dog.jpg",
     #                 image_shape=(300, 300),
     #                 t=15,
@@ -450,7 +444,25 @@ if __name__ == "__main__":
     #                 save_path="/Users/rahulpadmanabhan/Code/ws3/convex_optimization/deblur_denoise/results",
     #                 loss_function=psnr)
     
-
+    # Example 9:
+    # Gaussian blur and gaussian noise with primal_dr with psnr loss function
+    # blur_and_deblur_image(image_path="/Users/rahulpadmanabhan/Code/ws3/convex_optimization/deblur_denoise/utils/sample_images/dog.jpg",
+    #                 image_shape=(300, 300),
+    #                 t=15,
+    #                 gamma=0.3,
+    #                 niters=500,
+    #                 blur_type="gaussian",
+    #                 noise_type="gaussian",
+    #                 blur_kernel_size=5,
+    #                 blur_kernel_sigma=0.8,
+    #                 algorithm="primal_dr",
+    #                 display=True,
+    #                 save_loss=True,
+    #                 save_path="/Users/rahulpadmanabhan/Code/ws3/convex_optimization/deblur_denoise/results",
+    #                 loss_function=psnr)
+    
+    # Example 10:
+    # Gaussian blur and gaussian noise with primal_dual_dr with psnr loss function
     # blur_and_deblur_image(image_path="/Users/rahulpadmanabhan/Code/ws3/convex_optimization/deblur_denoise/utils/sample_images/dog.jpg",
     #             image_shape=(300, 300),
     #             t=1.4,
