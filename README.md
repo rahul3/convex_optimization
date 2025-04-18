@@ -1,54 +1,13 @@
 # convex_optimization
-Convex Optimization Project (MATH 463/563)
-## Contributing to this Project
+Convex Optimization Project (MATH 463/563) - McGill
 
-To contribute to this project, please follow these steps:
+Implementation of the following algorithms for image deblurring:
 
-1. **Fork the Repository**
-   - Click the "Fork" button in the top-right corner of this repository
-   - This will create a copy of the repository in your GitHub account
+1. Primal Douglas-Rachford Splitting (Spingarn’s Method)
+2. Primal-Dual Douglas Rachford Splitting
+3. ADMM (Dual Douglas-Rachford)
+4. Chambolle-Pock Method 
 
-2. **Clone your Fork**
-   ```bash
-   git clone https://github.com/YOUR-USERNAME/convex_optimization.git
-   cd convex_optimization
-   ```
-
-3. **Create a New Branch**
-   ```bash
-   git checkout -b your-feature-branch
-   ```
-   - Name your branch something descriptive related to your changes
-
-4. **Make Your Changes**
-   - Work on your changes in your feature branch
-   - Commit your changes with clear, descriptive commit messages:
-   ```bash
-   git add .
-   git commit -m "Description of your changes"
-   ```
-
-5. **Push to Your Fork**
-   ```bash
-   git push origin your-feature-branch
-   ```
-
-6. **Create a Pull Request**
-   - Go to the [original repository](https://github.com/rahul3/convex_optimization)
-   - Click "Pull Requests" and then "New Pull Request"
-   - Click "compare across forks"
-   - Select your fork and branch as the source
-   - Write a clear description of your changes
-   - Submit the pull request
-
-### Best Practices
-- Keep your fork [synced with the upstream repository](https://docs.github.com/en/github/collaborating-with-pull-requests/working-with-forks/syncing-a-fork)
-- Create a new branch for each feature or fix
-- Write clear commit messages
-- Test your changes before submitting a pull request
-- Respond to any feedback on your pull request
-
-For more detailed information about working with forks, see GitHub's guide on [working with forks](https://docs.github.com/en/github/collaborating-with-pull-requests/working-with-forks).
 
 # Build instructions
 
@@ -64,9 +23,11 @@ from deblur_denoise.chambolle_pock.algorithm import chambolle_pock
 # Convex Optimization Algorithms
 
 A collection of convex optimization algorithms for image deblurring and denoising, including:
-- ADMM (Alternating Direction Method of Multipliers)
-- Primal Douglas-Rachford Splitting
-- Chambolle-Pock Algorithm
+
+1. Primal Douglas-Rachford Splitting (Spingarn’s Method)
+2. Primal-Dual Douglas Rachford Splitting
+3. ADMM (Dual Douglas-Rachford)
+4. Chambolle-Pock Method 
 
 ## Installation
 
@@ -84,26 +45,51 @@ pip install -e .
   - numpy>=1.21.0
   - scipy>=1.7.0
   - matplotlib>=3.4.0
-  - torch (for GPU acceleration)
+  - torch (for GPU acceleration - TBA)
 
 ### Project Structure
 ```
 convex_optimization/
 ├── deblur_denoise/
 │   ├── admm/              # ADMM algorithm implementation
+│   │   ├── algorithm.py
+│   │   └── __init__.py
 │   ├── primal_dr/         # Primal Douglas-Rachford implementation
+│   │   ├── algorithm.py
+│   │   └── __init__.py
 │   ├── primal_dual_dr/    # Primal-Dual Douglas-Rachford implementation
+│   │   ├── algorithm.py
+│   │   └── __init__.py
 │   ├── chambolle_pock/    # Chambolle-Pock implementation
+│   │   ├── algorithm.py
+│   │   └── __init__.py
 │   ├── core/              # Core functionality
+│   │   ├── blur.py
 │   │   ├── convolution.py
+│   │   ├── loss.py
 │   │   ├── noise.py
-│   │   └── proximal_operators.py
+│   │   ├── proximal_operators.py
+│   │   └── __init__.py
 │   ├── op_math/           # Mathematical operators
-│   │   └── python_code/
-│   └── utils/             # Utility functions
+│   │   ├── python_code/
+│   │   ├── matlab_code/
+│   │   └── __init__.py
+│   ├── utils/             # Utility functions
+│   │   ├── conv_utils.py
+│   │   ├── logging_utils.py
+│   │   ├── sample_images/
+│   │   └── __init__.py
+│   ├── blur_deblur.py     # Main deblurring functionality
+│   └── __init__.py
 ├── .vscode/               # IDE configuration
-├── dev_script.py          # Development and testing script
-└── setup.py              # Package configuration
+│   ├── launch.json
+│   └── tasks.json
+├── build_test_script.py   # Development and testing script
+├── setup.py               # Package configuration
+├── requirements.txt       # Project dependencies
+├── LICENSE                # MIT License
+├── Project.md             # Project documentation
+└── README.md              # This file
 ```
 
 ### Development Workflow
@@ -126,7 +112,7 @@ convex_optimization/
 
    b. Using the command line:
    ```bash
-   python dev_script.py
+   python build_test_script.py
    ```
 
    c. Using the debugger:
@@ -135,11 +121,7 @@ convex_optimization/
    - Press F5 to start debugging
 
 ### Test Suites
-The development script includes:
-1. ADMM Solver Test
-   - Tests the ADMM algorithm with different parameters
-   - Includes metrics calculation (MSE, PSNR)
-   - Visual comparison of results
+The development script tests all algorithms for a sample image whose path can be read from the environment variable `CO_IMAGE_PATH`.
 
 ### Development Tools
 - **Build System**: Uses `setup.py` for package management
