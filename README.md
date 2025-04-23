@@ -1,5 +1,5 @@
 # convex_optimization
-Convex Optimization Project (MATH 463/563) - McGill
+Blurring and deblurring algorithms.
 
 Implementation of the following algorithms for image deblurring:
 
